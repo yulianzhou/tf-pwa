@@ -70,6 +70,7 @@ class ConfigLoader(BaseConfig):
         self.share_dict = share_dict
         self.decay_config = DecayConfig(self.config, share_dict)
         self.dec = self.decay_config.dec
+        self.dec = self.decay_config.dec
         self.particle_map, self.particle_property = (
             self.decay_config.particle_map,
             self.decay_config.particle_property,

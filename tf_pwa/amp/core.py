@@ -998,6 +998,20 @@ class HelicityDecay(AmpDecay):
                 ret.append((l, s))
         return tuple(ret)
 
+    def get_isospinbreak(self):
+        """judge whether the isospin break"""
+        ia = self.core.I
+        ib = self.outs[0].I
+        ic = self.outs[1].I
+        if ia is None or ib is None or ic is None:
+            return False
+        i_min = abs(ib - ic)
+        i_max = ib + ic
+        if ia in range(i_min, i_max + 1):
+            return False
+        else:
+            return True
+
 
 @regist_decay("default", 3)
 @regist_decay("AngSam3", 3)

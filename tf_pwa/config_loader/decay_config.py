@@ -32,6 +32,14 @@ def decay_chain_cut_ls(decay):
     return True, ""
 
 
+def decay_chain_cut_isospin(decay):
+    for i in decay:
+        if isinstance(i, HelicityDecay):
+            if i.get_isospinbreak():
+                return False, f"{i} is not aviable because of breacking isospin"
+    return True, ""
+
+
 def decay_chain_cut_mass(decay):
     for i in decay:
         if isinstance(i, HelicityDecay):
@@ -50,6 +58,7 @@ class DecayConfig(BaseConfig):
     decay_chain_cut_list = {
         "ls_cut": decay_chain_cut_ls,
         "mass_cut": decay_chain_cut_mass,
+        "isospin_cut": decay_chain_cut_isospin,
     }
 
     def __init__(self, dic, share_dict={}):
@@ -62,6 +71,7 @@ class DecayConfig(BaseConfig):
             "g0": "width",
             "J": "J",
             "P": "P",
+            "I": "I",
             "spins": "spins",
             "bw": "model",
             "model": "model",

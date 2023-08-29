@@ -252,6 +252,39 @@ def cal_fitfractions(amp, mcdata, res=None, batch=None, args=(), kwargs=None):
     return fitFrac, err_fitFrac
 
 
+def cal_fitfractions_pw(amp, mcdata, batch=None, args=(), kwargs=None):
+    kwargs = kwargs if kwargs is not None else {}
+    var = amp.trainable_variables
+    fitFrac = {}
+    err_fitFrac = {}
+    weight = 1.0
+    if batch is not None:
+        weight = mcdata.get("weight", 1.0)
+        mcdata = list(data_split(mcdata, batch))
+        if not isinstance(weight, float):
+            weight = list(data_split(weight, batch))
+    int_mc, g_int_mc = sum_gradient(
+        amp, mcdata, var=var, weight=weight, args=args, kwargs=kwargs
+    )
+    chains = list(amp.decay_group.chains)
+    combine = [[i] for i in range(len(chains))]
+    o_used_chains = amp.decay_group.chains_idx
+    for i in combine:
+        amp_tmp = amp
+        amp_tmp.set_used_chains(i)
+        print(f"amp.decaychains = {amp_tmp.decay_group.chains_idx}")
+        int_tmp, g_int_tmp = sum_gradient(
+            amp_tmp,
+            mcdata,
+            var=var,
+            weight=weight,
+            args=args,
+            kwargs=kwargs,
+        )
+        fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])] = int_tmp / int_mc
+    return fitFrac
+
+
 def cal_fitfractions_no_grad(
     amp, mcdata, res=None, batch=None, args=(), kwargs=None
 ):

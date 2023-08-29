@@ -45,6 +45,8 @@ def decay_chain_cut_mass(decay):
         if isinstance(i, HelicityDecay):
             if i.core.mass is None or any([j.mass is None for j in i.outs]):
                 continue
+            if str(i.core)[:-1] == "a1(1260)" and str(i.outs[0])[:-1] == "f2(1270)":
+                continue
             # print(i, i.core.mass, [j.mass for j in i.outs])
             if i.core.mass < sum([j.mass for j in i.outs]):
                 return (

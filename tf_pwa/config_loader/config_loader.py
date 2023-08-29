@@ -30,6 +30,7 @@ from tf_pwa.applications import (
     corr_coef_matrix,
     fit,
     fit_fractions,
+    fit_fractions_pw,
     force_pos_def,
     num_hess_inv_3point,
 )
@@ -722,7 +723,7 @@ class ConfigLoader(BaseConfig):
             else:
                 self.inv_he = np.linalg.pinv(h)
             diag_he = self.inv_he.diagonal()
-            hesse_error = np.sqrt(np.fabs(diag_he)).tolist()
+            hesse_error = np.sqrt(np.abs(diag_he)).tolist()
         else:
             hesse_error, self.inv_he = cal_hesse_error(
                 fcn,
@@ -784,6 +785,26 @@ class ConfigLoader(BaseConfig):
             amp, mcdata, self.inv_he, params, batch, res, method=method
         )
         return frac, err_frac
+
+    def cal_fitfractions_pw(
+        self,
+        params={},
+        mcdata=None,
+        batch=25000,
+        method="old",
+        combine=None
+    ):
+        if hasattr(params, "params"):
+            params = getattr(params, "params")
+        if mcdata is None:
+            mcdata = self.get_phsp_noeff()
+        if self.config["data"].get("lazy_call", False):
+            method = "new"
+        amp = self.get_amplitude()
+        frac = fit_fractions_pw(
+            amp_tmp, mcdata, self.inv_he, params, batch, method=method
+        )
+        return frac
 
     def cal_signal_yields(self, params={}, mcdata=None, batch=25000):
         if hasattr(params, "params"):
@@ -1078,7 +1099,7 @@ class PlotParams(dict):
                 trans = sy.lambdify(x, trans, modules="numpy")
             units = v.get("units", "GeV")
             bins = v.get("bins", self.defaults_config.get("bins", 50))
-            legend = v.get("legend", self.defaults_config.get("legend", True))
+            legend = v.get("legend", self.defaults_config.get("legend", False))
             yscale = v.get(
                 "yscale", self.defaults_config.get("yscale", "linear")
             )

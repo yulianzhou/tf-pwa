@@ -85,6 +85,20 @@ def BWR(m, m0, g0, q, q0, L, d):
     return ret
 
 
+@regist_lineshape("a1_1260")
+def a1_1260(m, m0):
+    m2 = m * m
+    m4 = m2 * m2
+    m6 = m4 * m2
+    gamma = tf.where(m < 0.78, 0, tf.where(m > 1.4, -2.036 + 2.781 * m - 0.6528 * m2, -111.37 + 677.225 * m - 1684.15 * m2 + 2191.93 * m2 * m - 1575.88 * m4 + 594.6 * m4 *m - 92.16 * m6))
+    m0 = tf.cast(m0, m.dtype)
+    x = m0 * m0 - m * m
+    y = m0 * gamma
+    s = x * x + y * y
+    ret = tf.complex(x / s, y / s)
+    return ret
+
+
 # added by xiexh for GS model rho
 def twoBodyCMmom(m_0, m_1, m_2):
     """relative momentum for 0 -> 1 + 2"""

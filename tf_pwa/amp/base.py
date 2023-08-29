@@ -14,6 +14,7 @@ from tf_pwa.breit_wigner import (
     Bprime_polynomial,
     BWR_normal,
     Gamma,
+    a1_1260
 )
 from tf_pwa.breit_wigner import barrier_factor2 as barrier_factor
 from tf_pwa.dec_parser import load_dec_file
@@ -272,6 +273,15 @@ class ParticleBW(Particle):
         mass = self.get_mass()
         width = self.get_width()
         return mass, width
+
+
+@regist_particle("a1_1260")
+class ParticleA1_1260(Particle):
+
+    def get_amp(self, data, _data_c=None, **kwargs):
+        mass = self.get_mass()
+        ret = a1_1260(data["m"], mass)
+        return ret
 
 
 @regist_particle("Kmatrix")

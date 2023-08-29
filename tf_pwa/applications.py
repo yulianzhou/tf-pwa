@@ -19,6 +19,7 @@ from .fit import fit_minuit, fit_multinest, fit_scipy
 from .fitfractions import (
     FitFractions,
     cal_fitfractions,
+    cal_fitfractions_pw,
     cal_fitfractions_no_grad,
 )
 from .phasespace import PhaseSpaceGenerator
@@ -65,6 +66,22 @@ def fit_fractions(
             ret.integral(mcdata, batch=batch)
         ret.error_matrix = inv_he
         return ret
+
+
+def fit_fractions_pw(
+    amp, mcdata, inv_he=None, params=None, batch=25000, method="old"
+):
+    if params is None:
+        params = {}
+    err_frac = {}
+    frac = {}
+    if method == "old":
+        with amp.temp_params(params):
+            frac = cal_fitfractions_pw(amp, mcdata, batch=batch)
+#        if inv_he is not None:
+#            for i in frac:
+#                err_frac[i] = np.sqrt(np.dot(np.dot(inv_he, grad[i]), grad[i]))
+        return frac
 
 
 def corr_coef_matrix(err_mtx):

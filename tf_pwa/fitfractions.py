@@ -252,7 +252,7 @@ def cal_fitfractions(amp, mcdata, res=None, batch=None, args=(), kwargs=None):
     return fitFrac, err_fitFrac
 
 
-def cal_fitfractions_pw(amp, mcdata, batch=None, args=(), kwargs=None):
+def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), kwargs=None):
     kwargs = kwargs if kwargs is not None else {}
     var = amp.trainable_variables
     fitFrac = {}
@@ -267,21 +267,39 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, args=(), kwargs=None):
         amp, mcdata, var=var, weight=weight, args=args, kwargs=kwargs
     )
     chains = list(amp.decay_group.chains)
+
     combine = [[i] for i in range(len(chains))]
-    o_used_chains = amp.decay_group.chains_idx
-    for i in combine:
-        amp_tmp = amp
-        amp_tmp.set_used_chains(i)
-        print(f"amp.decaychains = {amp_tmp.decay_group.chains_idx}")
-        int_tmp, g_int_tmp = sum_gradient(
-            amp_tmp,
-            mcdata,
-            var=var,
-            weight=weight,
-            args=args,
-            kwargs=kwargs,
-        )
-        fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])] = int_tmp / int_mc
+    for indx_i in range(len(combine)):
+        for indx_j in range(indx_i, -1, -1):
+            i = combine[indx_i]
+            j = combine[indx_j]
+            amp_tmp = amp
+            print(f"indx = {amp_tmp.decay_group.chains_idx}")
+            if i == j:
+                amp_tmp.set_used_chains(i)
+                name = "{}".format(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])
+            else:
+                amp_tmp.set_used_chains([i[0], j[0]])
+                print(f"indx = {amp_tmp.decay_group.chains_idx}")
+                name = str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]]) + " & " + str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[1]])
+            int_tmp, g_int_tmp = sum_gradient(
+                amp_tmp,
+                mcdata,
+                var=var,
+                weight=weight,
+                args=args,
+                kwargs=kwargs,
+            )
+            if i == j:
+                fitFrac[name] = round(int_tmp / int_mc, 3)
+            else:
+                int_val = round(
+                    (int_tmp / int_mc)
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])]
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[1]])], 3
+                )
+                if abs(int_val) > 0.01:
+                    fitFrac[name] = int_val
     return fitFrac
 
 

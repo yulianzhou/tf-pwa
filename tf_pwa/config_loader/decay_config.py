@@ -248,6 +248,10 @@ class DecayConfig(BaseConfig):
 
     def decay_chain_cut(self, decays):
         ret = []
+        chains = []
+        with open("chains.inp","r") as f:
+            for line in f:
+                chains.append(line.rstrip())
         for i in decays:
             flag = True
             for name in self.cut_list:
@@ -265,7 +269,8 @@ class DecayConfig(BaseConfig):
                     )
                     break
             if flag:
-                ret.append(i)
+                if str(i) in chains:
+                    ret.append(i)
         return ret
 
     def get_decay_struct(
@@ -348,6 +353,8 @@ class DecayConfig(BaseConfig):
                 all_params = chain_params.get("$all", {})
                 dec_c = get_decay_chain(i, **all_params)
                 ret.append(dec_c)
+        # print(f"{ret = ")
+        # [[chic1->R_pip0pim0+R_pip1pim1, R_pip0pim0->pip0+pim0, R_pip1pim1->pip1+pim1], [chic1->R_pip0pip1pim0+pim1, R_pip0pip1pim0->R_pip0pim0+pip1, R_pip0pim0->pip0+pim0], [chic1->R_pim0pim1pip1+pip0, R_pim0pim1pip1->R_pip1pim1+pim0, R_pip1pim1->pip1+pim1]]
         if process_cut:
             ret = self.decay_chain_cut(ret)
         if len(ret) == 0:

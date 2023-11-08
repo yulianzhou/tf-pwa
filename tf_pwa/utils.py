@@ -198,7 +198,8 @@ def array_split(data, batch=None):
         ret.append(tmp)
     return ret
 
-
+from .gpu_info import get_gpu_used_memory
+from .gpu_info import get_gpu_total_memory
 def time_print(f):
     """It provides a wrapper to print the time cost on a process."""
 
@@ -207,6 +208,8 @@ def time_print(f):
         now = time.time()
         ret = f(*args, **kwargs)
         print(f.__name__, " cost time:", time.time() - now)
+        # print(f"GPU total memory: {get_gpu_total_memory()}")
+        print(f"GPU used memory: {get_gpu_used_memory()}")
         return ret
 
     return g

@@ -932,10 +932,10 @@ class ConfigLoader(BaseConfig):
         if self.config["data"].get("lazy_call", False):
             method = "new"
         amp = self.get_amplitude()
-        frac = fit_fractions_pw(
+        frac, frac_2d = fit_fractions_pw(
             amp_tmp, mcdata, self.inv_he, params, batch, method=method
         )
-        return frac
+        return frac, frac_2d
 
     def cal_signal_yields(self, params={}, mcdata=None, batch=25000):
         if hasattr(params, "params"):

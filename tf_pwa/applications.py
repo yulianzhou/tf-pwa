@@ -77,11 +77,11 @@ def fit_fractions_pw(
     frac = {}
     if method == "old":
         with amp.temp_params(params):
-            frac = cal_fitfractions_pw(amp, mcdata, batch=batch)
+            frac, frac_2d = cal_fitfractions_pw(amp, mcdata, batch=batch)
 #        if inv_he is not None:
 #            for i in frac:
 #                err_frac[i] = np.sqrt(np.dot(np.dot(inv_he, grad[i]), grad[i]))
-        return frac
+        return frac, frac_2d
 
 
 def corr_coef_matrix(err_mtx):

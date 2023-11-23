@@ -262,6 +262,7 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), k
     kwargs = kwargs if kwargs is not None else {}
     var = amp.trainable_variables
     fitFrac = {}
+    fitFrac_2d = []
     err_fitFrac = {}
     weight = 1.0
     if batch is not None:
@@ -276,6 +277,7 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), k
 
     combine = [[i] for i in range(len(chains))]
     for indx_i in range(len(combine)):
+        fitFrac_1d = [0] * len(combine)
         for indx_j in range(indx_i, -1, -1):
             i = combine[indx_i]
             j = combine[indx_j]
@@ -298,15 +300,18 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), k
             )
             if i == j:
                 fitFrac[name] = round(int_tmp / int_mc, 3)
+                fitFrac_1d[indx_j] = fitFrac[name]
             else:
                 int_val = round(
                     (int_tmp / int_mc)
                     - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])]
                     - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[1]])], 3
                 )
+                fitFrac_1d[indx_j] = int_val
                 if abs(int_val) > 0.01:
                     fitFrac[name] = int_val
-    return fitFrac
+        fitFrac_2d.append(fitFrac_1d)
+    return fitFrac, fitFrac_2d
 
 
 def cal_fitfractions_no_grad(

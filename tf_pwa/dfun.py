@@ -229,9 +229,12 @@ def get_D_matrix_for_angle(angle, j, cached=True):
     gamma = angle["gamma"]
     name = "D_matrix_{}".format(j)
     if cached:
+    # if False:
         if name not in angle:
             angle[name] = D_matrix_conj(alpha, beta, gamma, j)
         return angle[name]
+    # if j == 0:
+    #     return tf.reshape(tf.complex(tf.ones_like(beta),tf.zeros_like(beta)),(-1,1,1))
     return D_matrix_conj(alpha, beta, gamma, j)
 
 

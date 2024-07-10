@@ -219,9 +219,9 @@ def time_print(f):
     def g(*args, **kwargs):
         now = time.time()
         ret = f(*args, **kwargs)
-        print(f.__name__, " cost time:", time.time() - now)
+        print(f.__name__, " cost time:", time.time() - now, flush=True)
         # print(f"GPU total memory: {get_gpu_total_memory()}")
-        print(f"GPU used memory: {get_gpu_used_memory()}")
+        print(f"GPU used memory: {get_gpu_used_memory()}", flush=True)
         return ret
 
     return g

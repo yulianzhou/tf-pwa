@@ -19,6 +19,7 @@ from .fit import fit_minuit, fit_multinest, fit_scipy
 from .fitfractions import (
     FitFractions,
     cal_fitfractions,
+    cal_fitfractions_ccpw,
     cal_fitfractions_pw,
     cal_fitfractions_no_grad,
 )
@@ -66,6 +67,18 @@ def fit_fractions(
             ret.integral(mcdata, batch=batch)
         ret.error_matrix = inv_he
         return ret
+
+
+def fit_fractions_ccpw(
+    amp, decaygroup_ccidx, mcdata, mcdata_woEff, inv_he=None, params=None, batch=25000, method="old"
+):
+    if params is None:
+        params = {}
+    frac = {}
+    if method == "old":
+        with amp.temp_params(params):
+            frac, frac_2d, pwEff = cal_fitfractions_ccpw(amp, decaygroup_ccidx, mcdata, mcdata_woEff, batch=batch)
+        return frac, frac_2d, pwEff
 
 
 def fit_fractions_pw(

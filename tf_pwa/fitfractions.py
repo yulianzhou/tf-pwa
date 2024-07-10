@@ -258,6 +258,91 @@ def cal_fitfractions(amp, mcdata, res=None, batch=None, args=(), kwargs=None):
     return fitFrac, err_fitFrac
 
 
+def cal_fitfractions_ccpw(amp, decaygroup_ccidx, mcdata, mcdata_woEff=None, batch=None, cal_coherence=False, args=(), kwargs=None):
+    kwargs = kwargs if kwargs is not None else {}
+    var = amp.trainable_variables
+    fitFrac = {}
+    pwEff = {}
+    fitFrac_2d = []
+    err_fitFrac = {}
+    weight = 1.0
+    weight_woEff = 1.0
+    if batch is not None:
+        weight = mcdata.get("weight", 1.0)
+        mcdata = list(data_split(mcdata, batch))
+        weight_woEFF = mcdata_woEff.get("weight", 1.0)
+        mcdata_woEff = list(data_split(mcdata_woEff, batch))
+        if not isinstance(weight, float):
+            weight = list(data_split(weight, batch))
+        if not isinstance(weight_woEff, float):
+            weight_woEff = list(data_split(weight_woEff, batch))
+    print("start calculate int_mc ----", flush=True)
+    int_mc = sum_no_gradient(
+        amp, mcdata, var=var, weight=weight, args=args, kwargs=kwargs
+    )
+    print(f"int_mc = {int_mc}")
+    chains = list(amp.decay_group.chains)
+    print(f"indx = {amp.decay_group.chains_idx}", flush=True)
+    print(f"decaygroup_ccidx = {decaygroup_ccidx}")
+    chains_indx = [i for i in range(len(chains))]
+    print(f"chains_indx = {chains_indx}")
+    for indx_i in range(len(chains_indx)):
+        if decaygroup_ccidx[indx_i] < indx_i:
+            continue
+        length_cc = len(chains_indx) - decaygroup_ccidx[-1]
+        fitFrac_1d = [0] * length_cc
+        fitFrac_1d_tmp = []
+        for indx_j in range(indx_i, -1, -1):
+            amp_tmp = amp
+            if indx_i == indx_j: # 电荷共轭道或无电荷共轭道单道
+                list_chains = [indx_i, decaygroup_ccidx[indx_i]]
+                amp_tmp.set_used_chains(sorted(list(set(list_chains))))
+                name = "{}".format(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])
+                print(f"name in i = j: {name}")
+            elif indx_j <= decaygroup_ccidx[indx_j]: # 
+                list_chains = sorted(list(set([indx_i, decaygroup_ccidx[indx_i], indx_j, decaygroup_ccidx[indx_j]])), reverse=False)
+                amp_tmp.set_used_chains(list_chains)
+                name = str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[list_chains.index(indx_i)]]) + " & " + str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[list_chains.index(indx_j)]])
+                print(f"name in i != j: {name}")
+            else:
+                continue
+            int_tmp = sum_no_gradient(
+                amp_tmp,
+                mcdata,
+                var=var,
+                weight=weight,
+                args=args,
+                kwargs=kwargs,
+            )
+            if indx_i == indx_j:
+                int_eff = sum_no_gradient(
+                    amp_tmp,
+                    mcdata_woEff,
+                    var=var,
+                    weight=weight_woEff,
+                    args=args,
+                    kwargs=kwargs,
+                )
+                fitFrac[name] = round(int_tmp / int_mc, 3)
+                pwEff[name] = round(int_tmp / int_eff, 4)
+                # fitFrac_1d[indx_j] = fitFrac[name]
+                fitFrac_1d_tmp.append(fitFrac[name])
+            else:
+                int_val = round(
+                    (int_tmp / int_mc)
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[list_chains.index(indx_i)]])]
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[list_chains.index(indx_j)]])], 3
+                )
+                # fitFrac_1d[indx_j] = int_val
+                fitFrac_1d_tmp.append(int_val)
+                #if abs(int_val) > 0.01:
+                #    fitFrac[name] = int_val
+        fitFrac_1d[:len(fitFrac_1d_tmp)] = reversed(fitFrac_1d_tmp)
+        fitFrac_2d.append(fitFrac_1d)
+    amp.set_used_chains(chains_indx)
+    return fitFrac, fitFrac_2d, pwEff
+
+
 def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), kwargs=None):
     kwargs = kwargs if kwargs is not None else {}
     var = amp.trainable_variables
@@ -273,25 +358,26 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), k
     int_mc, g_int_mc = sum_gradient(
         amp, mcdata, var=var, weight=weight, args=args, kwargs=kwargs
     )
+    print(f"int_mc = {int_mc}")
     chains = list(amp.decay_group.chains)
-
-    combine = [[i] for i in range(len(chains))]
-    for indx_i in range(len(combine)):
-        fitFrac_1d = [0] * len(combine)
+    print(f"indx = {amp.decay_group.chains_idx}", flush=True)
+    chains_indx = [[i] for i in range(len(chains))]
+    for indx_i in range(len(chains_indx)):
+        fitFrac_1d = [0] * len(chains_indx)
         for indx_j in range(indx_i, -1, -1):
-            i = combine[indx_i]
-            j = combine[indx_j]
-            amp_tmp = amp
-            print(f"indx = {amp_tmp.decay_group.chains_idx}")
+            i = chains_indx[indx_i]
+            j = chains_indx[indx_j]
+            amp_tmp2 = amp
+            print(f"indx = {amp_tmp2.decay_group.chains_idx}")
             if i == j:
-                amp_tmp.set_used_chains(i)
-                name = "{}".format(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])
+                amp_tmp2.set_used_chains(i)
+                name = "{}".format(amp.decay_group.chains[amp_tmp2.decay_group.chains_idx[0]])
             else:
-                amp_tmp.set_used_chains([i[0], j[0]])
-                print(f"indx = {amp_tmp.decay_group.chains_idx}")
-                name = str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]]) + " & " + str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[1]])
+                amp_tmp2.set_used_chains([i[0], j[0]])
+                print(f"indx = {amp_tmp2.decay_group.chains_idx}")
+                name = str(amp.decay_group.chains[amp_tmp2.decay_group.chains_idx[0]]) + " & " + str(amp.decay_group.chains[amp_tmp2.decay_group.chains_idx[1]])
             int_tmp, g_int_tmp = sum_gradient(
-                amp_tmp,
+                amp_tmp2,
                 mcdata,
                 var=var,
                 weight=weight,
@@ -304,8 +390,8 @@ def cal_fitfractions_pw(amp, mcdata, batch=None, cal_coherence=False, args=(), k
             else:
                 int_val = round(
                     (int_tmp / int_mc)
-                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[0]])]
-                    - fitFrac[str(amp.decay_group.chains[amp_tmp.decay_group.chains_idx[1]])], 3
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp2.decay_group.chains_idx[0]])]
+                    - fitFrac[str(amp.decay_group.chains[amp_tmp2.decay_group.chains_idx[1]])], 3
                 )
                 fitFrac_1d[indx_j] = int_val
                 if abs(int_val) > 0.01:

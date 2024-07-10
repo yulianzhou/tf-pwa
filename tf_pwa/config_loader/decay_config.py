@@ -1,7 +1,7 @@
 import copy
 import functools
 import random
-
+import os
 import yaml
 
 from tf_pwa.amp import (
@@ -115,6 +115,7 @@ class DecayConfig(BaseConfig):
         if cp_particles is not None:
             self.decay_struct.cp_particles = cp_particles
             self.full_decay.cp_particles = cp_particles
+        # self.decaygroup_ccidx = []
 
     @staticmethod
     def load_config(file_name, share_dict={}):
@@ -250,9 +251,12 @@ class DecayConfig(BaseConfig):
     def decay_chain_cut(self, decays):
         ret = []
         chains = []
-        with open("chains.inp","r") as f:
-            for line in f:
-                chains.append(line.rstrip())
+        chains_ccidx = []
+        cc_num = 0
+        if os.path.exists("chains.inp"):
+            with open("chains.inp","r") as f:
+                for line in f:
+                    chains.append(line.rstrip())
         for i in decays:
             flag = True
             for name in self.cut_list:
@@ -271,9 +275,31 @@ class DecayConfig(BaseConfig):
                         msg,
                     )
                     break
-            if flag:
+            if flag and len(chains) != 0:
                 if str(i) in chains:
                     ret.append(i)
+                    r1 = str(i).split('->')[2].split('+')[0][:-1]
+                    r2 = str(i).split('->')[3].split(', ')[1][:-1]
+                    print(f"c1 = {r1}")
+                    print(f"c2 = {r2}")
+                    if r1 == r2:
+                        chains_ccidx.append(len(chains_ccidx))
+                    else:
+                        flag_cc = True
+                        for item in range(len(ret)-1):
+                            r1cc = str(ret[item]).split('->')[2].split('+')[0][:-1]
+                            r2cc = str(ret[item]).split('->')[3].split(', ')[1][:-1]
+                            if r1 == r1cc and r2 == r2cc or r1 == r2cc and r2 == r1cc:
+                                chains_ccidx.append(item)
+                                chains_ccidx[item] = len(chains_ccidx) - 1
+                                cc_num+=1
+                                flag_cc = False
+                        if flag_cc:
+                            chains_ccidx.append(len(chains_ccidx))
+        chains_ccidx.append(cc_num)
+        self.decaygroup_ccidx = chains_ccidx
+        print(chains_ccidx)
+        print(self.decaygroup_ccidx)
         return ret
 
     def decay_cut(self, decays):

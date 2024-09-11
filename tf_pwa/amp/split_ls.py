@@ -242,6 +242,30 @@ class ParticleBWRLS2(ParticleLS):
         return ret
 
 
+@register_particle("BWR_MYLS")
+class ParticleBWRMYLS(ParticleLS):
+    def __call__(self, m, l=0):
+        m0 = self.get_mass()
+        m1 = self.decay[0].outs[0].get_mass()
+        m2 = self.decay[0].outs[1].get_mass()
+        ls = [(l, 0)]
+        q2 = get_relative_p2(m, m1, m2)
+        q02 = get_relative_p2(m0, m1, m2)
+        return self.get_ls_amp(m, ls, q2, q02)
+
+    def get_ls_amp(self, m, ls, q2, q02, d=3.0):
+        m0 = self.get_mass()
+        g0 = self.get_width()
+
+        ret = []
+        for l, s in ls:
+            bw = BWR2(m, m0, g0, q2, q02, l, d)
+            ql = q2 ** (l/2.)
+            bp = Bprime_q2(l, q2, q02, d)
+            ret.append(bw * tf.cast(ql, dtype=bw.dtype) * tf.cast(bp, dtype=bw.dtype))
+        return ret
+
+
 @register_particle("MultiBWR")
 class ParticleMultiBWR(ParticleLS):
     """

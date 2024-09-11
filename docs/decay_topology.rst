@@ -59,5 +59,5 @@ there are the three possible decay chains of A -> B,C,D ::
 
 the process is unique for different final particles
 
-Each inserting process delete a line and add three new line,
+Each process inserted, deletes a line and adds three new lines.
 So for decay process has :math:`n` final particles, there are :math:`(2n-3)!!` possible decay topology.

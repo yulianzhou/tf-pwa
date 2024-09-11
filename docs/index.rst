@@ -20,7 +20,7 @@ A detailed configuration file sample (with all usable parameters) can be found *
    amplitude
    custom_model
    decay_topology
-   resonacnes_params
+   resonances_params
    phasespace
    resolution
    auto_examples/index
@@ -66,7 +66,7 @@ and then fit the data.
 
 Fitting is the major part of an analysis, and it could also be the most time-consuming part.
 For this example (the complexity of the amplitude expression matters a lot), the time for fitting is about xxx (running on xxxGPU).
-Then we can step further to complete the analysis, like calculating the fit fractions.
+Then we can go one step ahead to complete the analysis, and calculate the fit fractions.
 
 .. code-block:: python
 

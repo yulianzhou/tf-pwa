@@ -116,6 +116,15 @@ def toy_config2(gen_toy, fit_result):
 
 
 @pytest.fixture
+def toy_config_covten(gen_toy):
+    from tf_pwa.amp import cov_ten
+
+    config = ConfigLoader(f"{this_dir}/config_covten.yml")
+    config.set_params(f"{this_dir}/exp_covten_params.json")
+    return config
+
+
+@pytest.fixture
 def toy_config3(gen_toy):
     config = ConfigLoader(f"{this_dir}/config_toy3.yml")
     config.set_params(f"{this_dir}/exp_params.json")
@@ -156,6 +165,22 @@ def test_cfit(gen_toy):
         linestyle_file="toy_data/a.yml",
         chains_id_method="res",
     )
+
+    def f(x):
+        return x.get_weight()
+
+    config.plot_partial_wave_interf(
+        "R_BC",
+        "R_BD",
+        prefix="toy_data/figure/interf_",
+        extra_plots=[{"name": "weight", "readdata": f}],
+    )
+    config.plot_partial_wave_interf(
+        "R_BC",
+        "R_BD",
+        prefix="toy_data/figure/interf2_",
+        ref_amp=amp,
+    )
     config.get_plotter().save_all_frame(prefix="toy_data/figure/s3", idx=0)
     plotter = config.get_plotter("toy_data/a.yml", use_weighted=True)
     plotter.smooth = True
@@ -165,6 +190,13 @@ def test_cfit(gen_toy):
     plotter.forzen_style()
     plotter.style.save()
     plotter.plot_var(amp)
+
+
+def test_sdp_gen(gen_toy):
+    config = ConfigLoader(f"{this_dir}/config_cfit.yml")
+    config.generate_SDP_p("R_BC", 10, legacy=True)
+    config.generate_SDP("R_BC", 10)
+    config.generate_SDP_p("R_BC", 10, legacy=False)
 
 
 def test_precached(gen_toy):
@@ -272,7 +304,7 @@ def test_fit(toy_config, fit_result):
         prefix="toy_data/figure/no_pull", plot_pull=False
     )
     toy_config.plot_partial_wave(
-        prefix="toy_data/figure/has_pull", plot_pull=True
+        prefix="toy_data/figure/has_pull", plot_pull=True, add_chi2=True
     )
     toy_config.plot_partial_wave(prefix="toy_data/figure", save_root=True)
     toy_config.plot_partial_wave(
@@ -283,6 +315,14 @@ def test_fit(toy_config, fit_result):
         smooth=False,
         bin_scale=1,
         res=["R_BC", ["R_BD", "R_CD"]],
+    )
+
+    def pw_f(x, **kwargs):
+        amp = toy_config.get_amplitude()
+        return [amp(x)]
+
+    toy_config.plot_partial_wave(
+        prefix="toy_data/figure/pw_", partial_waves_function=pw_f
     )
     toy_config.plot_partial_wave(prefix="toy_data/figure", color_first=False)
     toy_config.get_params_error(fit_result)
@@ -386,6 +426,22 @@ def test_fit_combine(toy_config2):
     assert np.allclose(results.min_nll, -204.9468493307786 * 2)
     toy_config2.get_params_error()
     print(toy_config2.get_params())
+    toy_config2.plot_partial_wave(results)
+
+
+def test_plot_combine(gen_toy):
+    config = MultiConfig(
+        [f"{this_dir}/config_plot2.yml", f"{this_dir}/config_toy.yml"],
+        total_same=True,
+    )
+    config.set_params(f"{this_dir}/exp_params.json")
+    config.plot_partial_wave(prefix="toy_data/com_plot/")
+
+
+def test_fit_covten(toy_config_covten):
+    toy_config_covten.fit()
+    toy_config_covten.get_params_error()
+    toy_config_covten.plot_partial_wave(prefix="toy_data/figure/cov_ten")
 
 
 def test_mix_likelihood(toy_config3):

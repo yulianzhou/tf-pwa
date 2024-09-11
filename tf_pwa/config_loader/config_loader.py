@@ -36,6 +36,7 @@ from tf_pwa.applications import (
 )
 from tf_pwa.cal_angle import prepare_data_from_decay
 from tf_pwa.data import (
+    ReadData,
     data_index,
     data_merge,
     data_shape,
@@ -466,14 +467,14 @@ class ConfigLoader(BaseConfig):
                     if "float" in particle_config and particle_config["float"]:
                         if "m" in particle_config["float"]:
                             p_i.mass.freed()  # set_fix(i+'_mass',unfix=True)
-                            if "m_max" in particle_config:
-                                upper = particle_config["m_max"]
+                            if "mass_max" in params_dic:
+                                upper = params_dic["mass_max"]
                             # elif m_sigma is not None:
                             #    upper = self.config["particle"][i]["m0"] + 10 * m_sigma
                             else:
                                 upper = None
-                            if "m_min" in particle_config:
-                                lower = particle_config["m_min"]
+                            if "mass_min" in params_dic:
+                                lower = params_dic["mass_min"]
                             # elif m_sigma is not None:
                             #    lower = self.config["particle"][i]["m0"] - 10 * m_sigma
                             else:
@@ -483,14 +484,14 @@ class ConfigLoader(BaseConfig):
                             self._neglect_when_set_params.append(str(p_i.mass))
                         if "g" in particle_config["float"]:
                             p_i.width.freed()  # amp.vm.set_fix(i+'_width',unfix=True)
-                            if "g_max" in particle_config:
-                                upper = particle_config["g_max"]
+                            if "width_max" in params_dic:
+                                upper = params_dic["width_max"]
                             # elif g_sigma is not None:
                             #    upper = self.config["particle"][i]["g0"] + 10 * g_sigma
                             else:
                                 upper = None
-                            if "g_min" in particle_config:
-                                lower = particle_config["g_min"]
+                            if "width_min" in params_dic:
+                                lower = params_dic["width_min"]
                             # elif g_sigma is not None:
                             #    lower = self.config["particle"][i]["g0"] - 10 * g_sigma
                             else:
@@ -608,7 +609,7 @@ class ConfigLoader(BaseConfig):
             for idx, wb in enumerate(w_bkg):
                 new_params = {k: v for k, v in nll_params.items()}
                 for k, v in params.items():
-                    if isinstance(i, list):
+                    if isinstance(v, list):
                         new_params[k] = v[idx]
                     else:
                         new_params[k] = v
@@ -1036,9 +1037,13 @@ class ConfigLoader(BaseConfig):
         if neglect_params is None:
             neglect_params = self._neglect_when_set_params
         if len(neglect_params) != 0:
-            # warnings.warn("Neglect {} when setting params.".format(neglect_params))
             for v in params:
                 if v in self._neglect_when_set_params:
+                    warnings.warn(
+                        "Neglect {} when setting params.".format(
+                            neglect_params
+                        )
+                    )
                     del ret[v]
         amplitude.set_params(ret)
         return True
@@ -1243,6 +1248,10 @@ class PlotParams(dict):
             self.params.append(i)
         for i in self.get_angle_vars(True):
             self.params.append(i)
+        for i in self.get_index_vars():
+            self.params.append(i)
+        for i in self.get_extra_vars():
+            self.params.append(i)
 
     def get_data_index(self, sub, name):
         dec = self.decay_struct.topology_structure()
@@ -1286,7 +1295,32 @@ class PlotParams(dict):
                 self.re_map.get(p, p),
                 "aligned_angle",
             )
+        if sub == "index":
+            name_i = name.split("/")
+            return name_i
         raise ValueError("unknown sub {}".format(sub))
+
+    def read_plot_config(self, v):
+        upper_ylim = v.get("upper_ylim", None)
+        xrange = v.get("range", None)
+        units = v.get("units", "")
+        bins = v.get("bins", self.defaults_config.get("bins", 50))
+        legend = v.get("legend", self.defaults_config.get("legend", True))
+        legend_outside = v.get(
+            "legend_outside",
+            self.defaults_config.get("legend_outside", False),
+        )
+        yscale = v.get("yscale", self.defaults_config.get("yscale", "linear"))
+        upper_ylim = v.get("upper_ylim", None)
+        return {
+            "upper_ylim": upper_ylim,
+            "legend": legend,
+            "legend_outside": legend_outside,
+            "range": xrange,
+            "bins": bins,
+            "units": units,
+            "yscale": yscale,
+        }
 
     def get_mass_vars(self):
         mass = self.config.get("mass", {})
@@ -1294,8 +1328,6 @@ class PlotParams(dict):
         for k, v in mass.items():
             id_ = v.get("id", k)
             display = v.get("display", "M({})".format(k))
-            upper_ylim = v.get("upper_ylim", None)
-            xrange = v.get("range", None)
             trans = v.get("trans", None)
             if trans is None:
                 trans = lambda x: x
@@ -1303,31 +1335,20 @@ class PlotParams(dict):
                 trans = sy.sympify(trans)
                 trans = sy.lambdify(x, trans, modules="numpy")
             units = v.get("units", "GeV")
-            bins = v.get("bins", self.defaults_config.get("bins", 50))
-            legend = v.get("legend", self.defaults_config.get("legend", False))
-            legend_outside = v.get(
-                "legend_outside",
-                self.defaults_config.get("legend_outside", False),
-            )
-            yscale = v.get(
-                "yscale", self.defaults_config.get("yscale", "linear")
+            common_config = self.read_plot_config(v)
+            idx = (
+                "particle",
+                self.re_map.get(get_particle(id_), get_particle(id_)),
+                "m",
             )
             yield {
+                **common_config,
+                "units": units,
                 "name": "m_" + k,
                 "display": display,
-                "upper_ylim": upper_ylim,
-                "idx": (
-                    "particle",
-                    self.re_map.get(get_particle(id_), get_particle(id_)),
-                    "m",
-                ),
-                "legend": legend,
-                "legend_outside": legend_outside,
-                "range": xrange,
-                "bins": bins,
+                "idx": idx,
                 "trans": trans,
-                "units": units,
-                "yscale": yscale,
+                "readdata": ReadData(idx, trans),
             }
 
     def get_angle_vars(self, is_align=False):
@@ -1365,24 +1386,12 @@ class PlotParams(dict):
                 )
             for j, v in i.items():
                 display = v.get("display", j)
-                upper_ylim = v.get("upper_ylim", None)
                 theta = j
                 trans = lambda x: x
                 if "cos" in j:
                     theta = j[4:-1]
                     trans = np.cos
-                bins = v.get("bins", self.defaults_config.get("bins", 50))
-                xrange = v.get("range", None)
-                legend = v.get(
-                    "legend", self.defaults_config.get("legend", False)
-                )
-                legend_outside = v.get(
-                    "legend_outside",
-                    self.defaults_config.get("legend_outside", False),
-                )
-                yscale = v.get(
-                    "yscale", self.defaults_config.get("yscale", "linear")
-                )
+                common_config = self.read_plot_config(v)
                 if is_align:
                     ang_type = "aligned_angle"
                 else:
@@ -1390,25 +1399,77 @@ class PlotParams(dict):
                 name_id = validate_file_name(k + "_" + j)
                 if is_align:
                     name_id = "aligned_" + name_id
+                idx = ("decay", decay_chain, decay, part, ang_type, theta)
                 yield {
+                    **common_config,
                     "name": name_id,
                     "display": display,
-                    "upper_ylim": upper_ylim,
-                    "idx": (
-                        "decay",
-                        decay_chain,
-                        decay,
-                        part,
-                        ang_type,
-                        theta,
-                    ),
+                    "idx": idx,
                     "trans": trans,
-                    "bins": bins,
-                    "range": xrange,
-                    "legend": legend,
-                    "legend_outside": legend_outside,
-                    "yscale": yscale,
+                    "readdata": ReadData(idx, trans),
                 }
+
+    def get_extra_vars(self):
+
+        from tf_pwa.formula import build_expr_function
+
+        dic = self.config.get("extra_vars", {})
+
+        for k, v in dic.items():
+            expr = v["expr"]
+            where = v.get("where", {})
+            f_expr, used_var = build_expr_function(expr)
+
+            var_f = []
+            for i in used_var:
+                idx = where.get(i, i)
+                if isinstance(idx, (list, tuple)):
+                    idx = idx[0], "/".join(idx[1])
+                    var_f = ReadData(self.get_data_index(*idx))
+                elif isinstance(idx, str):
+                    for j in self.params:
+                        if j["name"] == idx:
+                            var_f.append(j["readdata"])
+                else:
+                    raise TypeError("unknown variables for trans ")
+
+            def readdata(x):
+                var = [data_to_numpy(i(x)) for i in var_f]
+                return f_expr(**dict(zip(used_var, var)))
+
+            id_ = v.get("id", k)
+            display = v.get("display", str(expr))
+            common_config = self.read_plot_config(v)
+            yield {
+                **common_config,
+                "name": k,
+                "display": display,
+                "readdata": readdata,
+            }
+
+    def get_index_vars(self):
+
+        dic = self.config.get("index", {})
+
+        for k, v in dic.items():
+            idx = self.get_data_index("index", k)
+            id_ = v.get("id", k)
+            display = v.get("display", str(k))
+            trans = v.get("trans", None)
+            if trans is None:
+                trans = lambda x: x
+            else:
+                trans = sy.sympify(trans)
+                x = sy.symbols("x")
+                trans = sy.lambdify(x, trans, modules="numpy")
+            common_config = self.read_plot_config(v)
+            readdata = ReadData(idx, trans)
+            yield {
+                **common_config,
+                "name": k,
+                "display": display,
+                "readdata": readdata,
+            }
 
     def get_params(self, params=None):
         if params is None:

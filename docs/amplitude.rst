@@ -6,7 +6,7 @@ Amplitude
 Helicity Formula
 ________________
 
-Each Decay has Amplitude like
+Each Decay has Amplitude defined like:
 
 .. math::
     A^{A \rightarrow B+C}_{\lambda_{A},\lambda_{B},\lambda_{C}} = H_{\lambda_{B},\lambda_{C}}^{A \rightarrow B+C} D^{J_{A}\star}_{\lambda_{A},\lambda_{B}-\lambda_{C}}(\phi,\theta,0)
@@ -38,7 +38,7 @@ the sum of resonances
 then the differential cross-section
 
 .. math::
-    \frac{d\sigma}{d\Phi} = \frac{1}{N}\sum_{\lambda_{A}}\sum_{\lambda_{B},\lambda_{C},\lambda_{D}}|A_{\lambda_{A},\lambda_{B},\lambda_{C},\lambda_{D}}^{total}|^2
+    \frac{\mathrm{d}\sigma}{\mathrm{d}\Phi} = \frac{1}{N}\sum_{\lambda_{A}}\sum_{\lambda_{B},\lambda_{C},\lambda_{D}}|A_{\lambda_{A},\lambda_{B},\lambda_{C},\lambda_{D}}^{total}|^2
 
 
 

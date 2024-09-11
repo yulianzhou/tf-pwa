@@ -1159,12 +1159,41 @@ class FCN(object):
             self.mc_weight = tf.convert_to_tensor(
                 [1 / n_mcdata] * n_mcdata, dtype="float64"
             )
+
+        self.batch_weight = self._convert_batch(self.weight, self.batch)
         self.batch_mc_weight = self._convert_batch(self.mc_weight, self.batch)
         self.gauss_constr = GaussianConstr(self.vm, gauss_constr)
         self.cached_mc = {}
 
     def _convert_batch(self, data, batch):
-        return _convert_batch(data, batch)
+        ret = _convert_batch(data, batch)
+        if self.vm.strategy is not None:
+            ret = self._distribute_multi_gpu(ret)
+        return ret
+
+    def _distribute_multi_gpu(self, data):
+        strategy = self.vm.strategy
+        if isinstance(data, tf.data.Dataset):
+            data = strategy.experimental_distribute_dataset(data)
+        elif isinstance(data, list):
+            ret = []
+            n_p = strategy.num_replicas_in_sync
+            for ia in data:
+                ia = list(
+                    split_generator(
+                        ia, batch_size=(data_shape(ia) + n_p - 1) // n_p
+                    )
+                )
+
+                def _tmp_fun(ctx):
+                    return ia[ctx.replica_id_in_sync_group]
+
+                tmp = strategy.experimental_distribute_values_from_function(
+                    _tmp_fun
+                )
+                ret.append(tmp)
+            data = ret
+        return data
 
     def get_params(self, trainable_only=False):
         return self.vm.get_all_dic(trainable_only)
@@ -1214,7 +1243,7 @@ class FCN(object):
         nll, g = self.model.nll_grad_batch(
             self.batch_data,
             self.batch_mcdata,
-            weight=list(data_split(self.weight, self.batch)),
+            weight=self.batch_weight,
             mc_weight=self.batch_mc_weight,
         )
         self.n_call += 1

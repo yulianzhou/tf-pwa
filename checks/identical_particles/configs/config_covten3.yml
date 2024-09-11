@@ -1,0 +1,33 @@
+data:
+  dat_order: [B, C, D]
+  identical_particles: [[C, D]]
+
+decay:
+  # change the decay model to cov_ten_simple
+  A: [BC, D, model: cov_ten_simple]
+  BC: [B, C, model: cov_ten_simple]
+
+particle:
+  $top: A
+  $finals: [B, C, D]
+  A:
+    J: 1/2
+    P: -1
+    mass: 3.0
+  B:
+    J: 1/2
+    P: -1
+    mass: 0.1
+  C:
+    J: 0
+    P: -1
+    mass: 0.1
+  D:
+    J: 0
+    P: -1
+    mass: 0.1
+  BC:
+    J: 1/2
+    P: -1
+    mass: 2.0
+    width: 0.5

@@ -1,0 +1,44 @@
+data:
+  dat_order: [B, C, D]
+
+decay:
+  A:
+    - [BC, D]
+    - [BD, C]
+    - [CD, B]
+  BC: [B, C]
+  BD: [B, D]
+  CD: [C, D]
+
+particle:
+  $top: A
+  $finals: [B, C, D]
+  A:
+    J: 1/2
+    P: 1
+    mass: 5.0
+  B:
+    J: 1/2
+    P: 1
+    mass: 1.0
+  C:
+    J: 0
+    P: 0
+    mass: 0.5
+  D:
+    J: 0
+    P: 0
+    mass: 0.5
+  BC:
+    J: 1/2
+    P: -1
+    mass: 2.0
+    width: 0.5
+    model: BW
+  BD:
+    J: 1/2
+    P: -1
+    mass: 2.0
+    width: 0.5
+    model: BW
+  CD: []

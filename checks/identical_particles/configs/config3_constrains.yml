@@ -1,0 +1,45 @@
+data:
+  dat_order: [B, C, D]
+
+decay:
+  A:
+    - [BC, D]
+    - [BD, C]
+  BC: [B, C]
+  BD: [B, D]
+
+particle:
+  $top: A
+  $finals: [B, C, D]
+  A:
+    J: 1/2
+    P: -1
+    mass: 3.0
+  B:
+    J: 1/2
+    P: -1
+    mass: 0.1
+  C:
+    J: 0
+    P: -1
+    mass: 0.1
+  D:
+    J: 0
+    P: -1
+    mass: 0.1
+  BC:
+    J: 1/2
+    P: -1
+    mass: 2.0
+    width: 0.5
+  BD:
+    J: 1/2
+    P: -1
+    mass: 2.0
+    width: 0.5
+
+constrains:
+  # constraint the same total coupling, and also for g_ls if multiply g_ls exists.
+  var_equal:
+    - [A->BC.DBC->B.C_total_0r, A->BD.CBD->B.D_total_0r]
+    - [A->BC.DBC->B.C_total_0i, A->BD.CBD->B.D_total_0i]

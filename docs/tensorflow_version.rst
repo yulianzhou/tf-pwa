@@ -14,4 +14,4 @@ Tensorflow and Cudatoolkit Version
 
 4. **Will you update the** `tensorflow_2_X_requirements.txt` **file regularly to the latest available version on `conda`?**
     - We do not guarantee any regular updates on `tensorflow_2_X_requirements.txt`.
-    - We will update this should particular build become unavailable on `conda` **or** a new release of GPUs require a `tensorflow` and `cudatoolkit` update. Please notify us if this is the case.
+    - We will update this should a particular build becomes unavailable on `conda` **or** a new release of GPUs require a `tensorflow` and `cudatoolkit` update. Please notify us if this is the case.

@@ -15,6 +15,8 @@ def test_hist1d():
     hist.draw(type="line+bar")
     hist.draw_kde(ax, kind="gauss", color="blue")
     hist.draw_kde(ax, kind="cauchy", color="red")
+    (hist * 0.5).draw(ax, type="fill", facecolor="none", hatch="///")
+    (hist * 0.4).draw_stepfill(ax, facecolor="none", hatch="\\")
     (0.1 * hist + hist * 0.1).draw_bar(ax)
     hist.draw_error(ax)
     hist2 = Hist1D.histogram(
@@ -29,6 +31,7 @@ def test_hist1d():
     )
     ax2 = plt.subplot2grid((4, 1), (3, 0), rowspan=1)
     (hist2 - hist).draw_pull(ax2)
+    (hist2 - hist).chi2()
     plt.savefig("hist1d_test1.png")
     plt.clf()
 

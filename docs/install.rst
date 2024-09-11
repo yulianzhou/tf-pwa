@@ -4,7 +4,7 @@ Install
 To use TFPWA, we need some dependent packages. There are two main ways,
 `conda` and `virtualenv` you can choose *one* of them. *Or* you can choose other method in :ref:`other-method`
 
-1. vitrual environment
+1. virtual environment
 ----------------------
 
 To avoid conflict of dependence, we recommed to use vitrual environment. there are two main vitrual environment for python packages,
@@ -62,9 +62,9 @@ and then you can install packages in the conda environment
 
 .. code::
 
-   source ./tfpwa/bin/activete
+   source ./tfpwa/bin/activate
 
-- 1.2.5 You can  exit the environment by
+- 1.2.5 You can exit the environment by
 
 .. code::
 
@@ -104,10 +104,10 @@ When using `virtualenv`, there is also simple way to install tensorflow2
    You can use `-i https://pypi.tuna.tsinghua.edu.cn/simple` option to use pypi mirror site.
 
 
-3. Other dependences
---------------------
+3. Other dependencies
+---------------------
 
-Other dependences of TFPWA is simple.
+Other dependencies of TFPWA is simple.
 
 
 3.1 Get TFPWA package
@@ -124,16 +124,16 @@ Get the packages using
 3.2 conda
 `````````
 
-3.2.1 other dependences
+3.2.1 other dependencies
 
-In conda environment, go into the directory of `tf-pwa`, you can install the rest dependences by
+In conda environment, go into the directory of `tf-pwa`, you can install rest of the dependencies by
 
 .. code::
 
    conda install --file requirements-min.txt
 
 .. note::
-   we recommed Ampere card users to install with
+   we recommend Ampere card users to install with
    `tensorflow_2_6_requirements.txt` (see this
    `technical FAQ <https://tf-pwa.readthedocs.io/en/latest/tensorflow_version.html>`_).
 
@@ -156,7 +156,7 @@ Using `-e`, so it can be updated by `git pull` directly.
 3.3 virtualenv
 ``````````````
 
-In virtualenv, You can install dependences and TFPWA together.
+In virtualenv, You can install dependencies and TFPWA together.
 
 .. code::
 
@@ -165,10 +165,10 @@ In virtualenv, You can install dependences and TFPWA together.
 Using `-e`, so it can be updated by `git pull` directly.
 
 
-4. (option)  Other dependences.
--------------------------------
+4. (option)  Other dependencies.
+--------------------------------
 
-   There are some option packages, such as `uproot` for reading root file.
+   There are some optional packages, such as `uproot` for reading root file.
 
 4.1 conda
 `````````
@@ -200,7 +200,7 @@ We also provided other install method.
 5.1 conda channel (experimental)
 ````````````````````````````````
 
-A pre-built conda package (Linux only) is also provided, just run following
+A pre-built conda package (Linux only) is also provided, just run the following
 command to install it.
 
 .. code::
@@ -209,7 +209,7 @@ command to install it.
    conda install tf-pwa
 
 5.2  pip
-````````
+``````````
 
 When using `pip`, you will need to install CUDA to use GPU. Just run the
 following command :

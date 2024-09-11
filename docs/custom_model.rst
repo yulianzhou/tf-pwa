@@ -57,7 +57,7 @@ We can also add parameters in the `.Model` ``init_params`` using ``self.add_var(
            return tf.complex( m + self.a(), zeros)
 
 Then a parameters ``{particle_name}_a`` will appear in the parameters, we use ``self.a()`` to get the value in ``get_amp``.
-Note, the type of return value should be ``tf.complex``. All builtin model is located in ``tf_pwa/amp.py``.
+Note, the type of return value should be ``tf.complex``. All built in models are located in ``tf_pwa/amp.py``.
 
 
 
@@ -75,9 +75,9 @@ There is a simple method to define Resonance model, like
    def r_line(m, a: FloatParams = 1.0):
        return m + a
 
-Those code will build a class similar as Line model define before.
+Those code will build a class similar as Line model defined before.
 By using `inspect` module, we can get the `FullArgSpec` of a function.
-For a keyword arguments with type annotation as `FloatParams`, it will be treated as a fit paraments.
+For a keyword arguments with type annotation as `FloatParams`, it will be treated as a fit parameter.
 
 .. note::
     the first arguments have to be the invariant mass `m` of the resonance.

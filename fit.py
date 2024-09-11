@@ -279,7 +279,13 @@ def main():
     parser.add_argument(
         "--CPU-plot", action="store_true", default=False, dest="cpu_plot"
     )
-    parser.add_argument("-c", "--config", default="config.yml", dest="config")
+    parser.add_argument(
+        "-c",
+        "--config",
+        default="config.yml",
+        dest="config",
+        help="config.yml files, support input multiply file as `config1.yml,config2.yml` to do simultaneous fit using different model",
+    )
     parser.add_argument(
         "-i", "--init_params", default="init_params.json", dest="init"
     )

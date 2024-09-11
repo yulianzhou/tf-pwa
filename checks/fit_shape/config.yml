@@ -1,0 +1,22 @@
+data:
+  dat_order: [B, C, D]
+
+decay:
+  A: [BC, D]
+  BC: [B, C]
+
+particle:
+  $top: A
+  $finals: [B, C, D]
+  A: { J: 0, P: -1, mass: 3.0 }
+  B: { J: 0, P: -1, mass: 0.1 }
+  C: { J: 0, P: -1, mass: 0.1 }
+  D: { J: 0, P: -1, mass: 0.1 }
+  BC: [BC1, BC2]
+  BC1: { J: 0, P: +1, mass: 1.0, width: 0.5 }
+  BC2: { J: 0, P: +1, mass: 2.0, width: 0.5 }
+
+constrains:
+  decay:
+    fix_chain_idx: 0
+    fix_chain_val: 1

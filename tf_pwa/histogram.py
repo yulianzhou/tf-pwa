@@ -89,16 +89,17 @@ class Hist1D:
             ret = []
             for i in draw_type.split("+"):
                 ret.append(self.draw(ax=ax, type=i, **kwargs))
-        elif draw_type == "hist":
-            ret = self.draw_hist(ax=ax, **kwargs)
-        elif draw_type == "bar":
-            ret = self.draw_bar(ax=ax, **kwargs)
-        elif draw_type == "kde":
-            ret = self.draw_kde(ax=ax, **kwargs)
-        elif draw_type == "error":
-            ret = self.draw_error(ax=ax, **kwargs)
-        elif draw_type == "line":
-            ret = self.draw_line(ax=ax, **kwargs)
+        elif draw_type in [
+            "hist",
+            "bar",
+            "kde",
+            "error",
+            "line",
+            "fill",
+            "stepfill",
+        ]:
+            draw_fun = getattr(self, "draw_" + draw_type)
+            ret = draw_fun(ax=ax, **kwargs)
         else:
             raise NotImplementedError()
         return ret
@@ -130,6 +131,24 @@ class Hist1D:
         else:
             return ax.plot(x, kde(x), color=color, **kwargs)
 
+    def draw_fill(self, ax=plt, kind="gauss", bin_scale=1.0, **kwargs):
+        color = kwargs.pop("color", self._cached_color)
+        m = self.bin_center
+        bw = self.bin_width * bin_scale
+        kde = weighted_kde(m, self.count, bw, kind)
+        x = np.linspace(
+            self.binning[0], self.binning[-1], self.count.shape[0] * 10
+        )
+        return ax.fill_between(
+            x, kde(x), np.zeros_like(x), color=color, **kwargs
+        )
+
+    def draw_stepfill(self, ax=plt, kind="gauss", bin_scale=1.0, **kwargs):
+        color = kwargs.pop("color", self._cached_color)
+        x = np.repeat(self.binning, 2)
+        y = np.concatenate([[0], np.repeat(self.count, 2), [0]])
+        return ax.fill_between(x, y, np.zeros_like(x), color=color, **kwargs)
+
     def draw_pull(self, ax=plt, **kwargs):
         with np.errstate(divide="ignore", invalid="ignore"):
             y_error = np.where(self.error == 0, 0, self.count / self.error)
@@ -139,6 +158,14 @@ class Hist1D:
             width=self.bin_width,
             **kwargs,
         )
+
+    def chi2(self):
+        with np.errstate(divide="ignore", invalid="ignore"):
+            y_error = np.where(self.error == 0, 0, self.count / self.error)
+        print(y_error)
+        print((y_error**2).astype(np.int))
+        print(np.sum((y_error**2).astype(np.int)))
+        return np.sum(y_error**2)
 
     def draw_line(self, ax=plt, num=1000, kind="UnivariateSpline", **kwargs):
         x_new, y_new = interp_hist(self.binning, self.count, num, kind)
@@ -197,15 +224,25 @@ class Hist1D:
         )
 
     @staticmethod
-    def histogram(m, *args, weights=None, **kwargs):
+    def histogram(m, *args, weights=None, mask_error=np.inf, **kwargs):
         if weights is None:
             count, binning = np.histogram(m, *args, **kwargs)
             count2, _ = np.histogram(m, *args, **kwargs)
+            mask_count = count
         else:
             weights = np.asarray(weights)
             count, binning = np.histogram(m, *args, weights=weights, **kwargs)
             count2, _ = np.histogram(m, *args, weights=weights**2, **kwargs)
+            mask_count, _ = np.histogram(m, *args, **kwargs)
+        count2 = np.where(mask_count == 0, mask_error, count2)
         return Hist1D(binning, count, np.sqrt(count2))
+
+    def chi2(self):
+        cut = ~np.isinf(self.error)
+        return np.sum((self.count[cut] / self.error[cut]) ** 2)
+
+    def ndf(self):
+        return np.sum(~np.isinf(self.error))
 
     def scale_to(self, other):
         scale_factor = other.get_count() / self.get_count()

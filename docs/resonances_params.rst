@@ -36,11 +36,11 @@ From `Resonacces.yml` to the real model, there will be following steps.
    The particle class is `cls = get_particle_model(item["model"])`,
    and the object is  `cls(**item)`.
 
-   All parameters wull be stored in `config.particle_property[name]`.
+   All parameters will be stored in `config.particle_property[name]`.
 
 
 
-All aviable parameters can be devied into the flowowing 3 sets.
+All available parameters can be divided into the following 3 sets.
 
 Common Parameters
 -----------------
@@ -71,10 +71,10 @@ Model Parameters
 Parameters defined in the real model. :doc:`particle_model`
 
 
-There are many parameters defined by the user, the those parameters will be pass to model class,
+There are many parameters defined by the user, then those parameters will be passed to the model class,
 such as the paramthers for `__init__(self, **kwargs)` method.
 
-For examples, the default model (`BWR`, `~tf_pwa.particle.BaseParticle`) have following parameters:
+For example, the default model (`BWR`, `~tf_pwa.particle.BaseParticle`) has the following parameters:
 
 +---------------------+-----------------------------+----------------------------------------+
 |  name               | default value               | comment                                |
@@ -90,7 +90,7 @@ Other Parameters
 
 There are also some other parameters which is used to control the program running.
 
-For examples, simple constrains, the following parameters are using by `~tf_pwa.config_loader.ConfigLoader` as constrains.
+For example, simple constraints, the following parameters are used by `~tf_pwa.config_loader.ConfigLoader` as constraints.
 
 +----------------------------+----------------+-----------------------------------+
 |  name                      | default value  | comment                           |
@@ -103,7 +103,7 @@ For examples, simple constrains, the following parameters are using by `~tf_pwa.
 +----------------------------+----------------+-----------------------------------+
 
 
-Another examples are parameters  to build decay chain for particle `R`.
+Another example are parameters to build decay chain for particle `R`.
 
 +------------------------+----------------+----------------------------------------------------------+
 |  name                  | default value  | comment                                                  |
@@ -115,7 +115,7 @@ Another examples are parameters  to build decay chain for particle `R`.
 |  `model`               |   `default`    |  Particle model for `R`                                  |
 +------------------------+----------------+----------------------------------------------------------+
 
-There are also other common used parameters.
+There are also other commonly used parameters.
 
 +------------------------+----------------+----------------------------------------------------------+
 |  name                  | default value  | comment                                                  |

@@ -1,0 +1,18 @@
+{
+  "BC1_mass": 1.0,
+  "BC1_width": 0.5,
+  "BC2_mass": 2.0,
+  "BC2_width": 0.5,
+  "A->BC1.DBC1->B.C_total_0r": 1.0,
+  "A->BC1.DBC1->B.C_total_0i": 0.0,
+  "A->BC1.D_g_ls_0r": 1.0,
+  "A->BC1.D_g_ls_0i": 0.0,
+  "BC1->B.C_g_ls_0r": 1.0,
+  "BC1->B.C_g_ls_0i": 0.0,
+  "A->BC2.DBC2->B.C_total_0r": 1.0,
+  "A->BC2.DBC2->B.C_total_0i": 1.5,
+  "A->BC2.D_g_ls_0r": 1.0,
+  "A->BC2.D_g_ls_0i": 0.0,
+  "BC2->B.C_g_ls_0r": 1.0,
+  "BC2->B.C_g_ls_0i": 0.0
+}

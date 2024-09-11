@@ -31,8 +31,10 @@ from tf_pwa.applications import (
 from tf_pwa.cal_angle import prepare_data_from_decay
 from tf_pwa.data import (
     data_index,
+    data_merge,
     data_shape,
     data_split,
+    data_to_numpy,
     load_data,
     save_data,
 )
@@ -225,32 +227,7 @@ class MultiConfig(object):
 
     def set_params(self, params, neglect_params=None):
         _amps = self.get_amplitudes()
-        if isinstance(params, str):
-            if params == "":
-                return False
-            try:
-                with open(params) as f:
-                    params = yaml.safe_load(f)
-            except Exception as e:
-                print(e)
-                return False
-        if hasattr(params, "params"):
-            params = params.params
-        if isinstance(params, dict):
-            if "value" in params:
-                params = params["value"]
-        ret = params.copy()
-        if neglect_params is None:
-            neglect_params = self._neglect_when_set_params
-        if len(neglect_params) != 0:
-            warnings.warn(
-                "Neglect {} when setting params.".format(neglect_params)
-            )
-            for v in params:
-                if v in self._neglect_when_set_params:
-                    del ret[v]
-        self.vm.set_all(ret)
-        return True
+        self.configs[0].set_params(params, neglect_params=neglect_params)
 
     @contextlib.contextmanager
     def params_trans(self):
@@ -262,3 +239,73 @@ class MultiConfig(object):
         val = {k: float(v) for k, v in params.items()}
         with open(file_name, "w") as f:
             json.dump(val, f, indent=2)
+
+    def _get_plot_partial_wave_input(
+        self, params=None, prefix="figure/all", save_root=False, **kwargs
+    ):
+        path = os.path.dirname(prefix)
+        os.makedirs(path, exist_ok=True)
+
+        all_data = []
+        extra = None
+        for config_i in self.configs:
+            for data, extra in config_i._get_plot_partial_wave_input(
+                params=params, **kwargs
+            ):
+                all_data.append(data)
+
+        data_dict = data_to_numpy(data_merge(*[i[0] for i in all_data]))
+        bg_dict = data_to_numpy(data_merge(*[i[2] for i in all_data]))
+
+        all_keys = list(all_data[-1][1].keys())
+        for idx, i in enumerate(all_data[:-1]):
+            phsp = i[1]
+            weights_keys = [j for j in phsp.keys() if j.endswith("_fit")]
+            tail_keys = [k[k[4:].index("_") + 4 :] for k in weights_keys]
+            for k in all_keys:
+                if k in phsp or not k.endswith("_fit"):
+                    continue
+                weights_keys = [j for j in phsp.keys() if j.endswith("_fit")]
+                idx_key = k[k[4:].index("_") + 4 :]
+                if idx_key in tail_keys:
+                    new_name = weights_keys[tail_keys.index(idx_key)]
+                    print(
+                        "com_plot: use", new_name, "for", k, "for sample", idx
+                    )
+                    phsp[k] = phsp[new_name]
+                else:
+                    print("com_plot: set", k, "to 0 for sample", idx)
+                    phsp[k] = np.zeros_like(phsp["MC_total_fit"])
+        phsp_dict = data_to_numpy(data_merge(*[i[1] for i in all_data]))
+
+        if save_root:
+            save_dict_to_root(
+                [data_dict, phsp_dict, bg_dict],
+                file_name=prefix + "variables_com.root",
+                tree_name=["data", "fitted", "sideband"],
+            )
+            print("Save root file " + prefix + "com_variables.root")
+
+        return (data_dict, phsp_dict, bg_dict), extra
+
+    def plot_partial_wave(
+        self, params=None, prefix="figure/all", save_root=False, **kwargs
+    ):
+
+        data, extra = self._get_plot_partial_wave_input(
+            params=params, prefix=prefix, save_root=save_root, **kwargs
+        )
+
+        data_dict, phsp_dict, bg_dict = data
+        _, plot_var_dic, chain_property, nll = extra
+
+        self.configs[-1]._plot_partial_wave(
+            data_dict,
+            phsp_dict,
+            bg_dict,
+            prefix,
+            plot_var_dic,
+            chain_property,
+            nll=nll,
+            **kwargs,
+        )

@@ -1,21 +1,19 @@
-Setup for Developer Enveriment
-------------------------------
+Setup for Developer Environment
+-------------------------------
 
 .. note::
-   Before the developing, creating a standalone enveriment is recommanded (see https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands for more).
+   Before developing, creating a standalone environment is recommended (see https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#creating-an-environment-with-commands for more).
 
+The main steps are similar to the normal installation process; however, two additional steps are to be performed here.
 
-The main steps are similar as normal install, only two extra things need to be done.
-
-The first things is writing tests, and tests your code.
-We use pytest (https://docs.pytest.org/en/stable/) framework, You should install it.
+The first thing is writing tests and then testing your code.
+We use pytest (https://docs.pytest.org/en/stable/) framework for the same, it should be installed as well.
 
 .. code::
 
     conda install pytest pytest-cov pytest-benchmark
 
-
-The other things is `pre-commit`. it need for developing.
+The other thing is `pre-commit`. It is needed for development.
 
 1. You can install `pre-commit` as
 
@@ -29,21 +27,24 @@ and
 
 .. code::
 
-    conda install pylint # local dependences
+    conda install pylint # local dependencies
     pre-commit install
 
-You can check if pre-commit is working well by running
+You can check if pre-commit is working well by running:
 
 .. code::
 
     pre-commit run -a
 
-It may take some time to install required package.
+It may take some time to install required packages.
 
 .. note::
-   For developer using using editor with formatter, you should be careful for the options.
+   If there are some `GLIBC_XXX` errors at this step, you can try to install `node.js`.
 
-The following are all commands needed
+.. note::
+   For developers using an editor with a formatter, you should be careful about the options.
+
+The following are all commands needed:
 
 .. code::
 

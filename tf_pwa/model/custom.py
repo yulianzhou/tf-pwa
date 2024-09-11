@@ -74,16 +74,7 @@ class BaseCustomModel(Model):
     @tf.function
     def _fast_int_mc_grad_multi(self, ia):
         strategy = self.Amp.vm.strategy
-        n_p = strategy.num_replicas_in_sync
-        ia = list(
-            split_generator(ia, batch_size=(data_shape(ia) + n_p - 1) // n_p)
-        )
-
-        def _tmp_fun(ctx):
-            return ia[ctx.replica_id_in_sync_group]
-
-        i = strategy.experimental_distribute_values_from_function(_tmp_fun)
-        a, b = i
+        a, b = ia
         vm = self.Amp.vm
         per_replica_losses = vm.strategy.run(
             self.value_and_grad(self.eval_normal_factors), args=(a, b)
@@ -96,22 +87,14 @@ class BaseCustomModel(Model):
     @tf.function
     def _fast_nll_part_grad_multi(self, ia, int_mc_x, int_mc_g, idx):
         strategy = self.Amp.vm.strategy
-        n_p = strategy.num_replicas_in_sync
-        ia = list(
-            split_generator(ia, batch_size=(data_shape(ia) + n_p - 1) // n_p)
-        )
-
-        def _tmp_fun(ctx):
-            return ia[ctx.replica_id_in_sync_group]
-
-        ab = strategy.experimental_distribute_values_from_function(_tmp_fun)
+        a, b = ia
         int_mc = SumVar(int_mc_x, int_mc_g, self.Amp.trainable_variables)
         vm = self.Amp.vm
         per_replica_losses = vm.strategy.run(
             self.value_and_grad(
-                lambda i: self.eval_nll_part(i[0], i[1], int_mc(), idx)
+                lambda i0, i1: self.eval_nll_part(i0, i1, int_mc(), idx)
             ),
-            args=(ab,),
+            args=(a, b),
         )
         tmp = vm.strategy.reduce(
             tf.distribute.ReduceOp.SUM, per_replica_losses, axis=None
@@ -189,6 +172,16 @@ class SimpleNllModel(BaseCustomModel):
     def eval_nll_part(self, data, weight, norm, idx=0):
         nll = -tf.reduce_sum(weight * tf.math.log(self.Amp(data)))
         nll_norm = tf.reduce_sum(weight) * tf.math.log(norm[0])
+        return nll + nll_norm
+
+
+@register_nll_model("simple_clip")
+class SimpleClipNllModel(SimpleNllModel):
+    def eval_nll_part(self, data, weight, norm, idx=0):
+        from .model import clip_log
+
+        nll = -tf.reduce_sum(weight * clip_log(self.Amp(data)))
+        nll_norm = tf.reduce_sum(weight) * clip_log(norm[0])
         return nll + nll_norm
 
 

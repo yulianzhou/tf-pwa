@@ -23,9 +23,7 @@ def cal_chi2_config(
         data_cut = np.array([data_index(data, idx) for idx in data_idx])
     amp_weight = config.get_amplitude()(phsp).numpy()
     phsp_cut = np.array([data_index(phsp, idx) for idx in data_idx])
-    phsp_slice = np.concatenate(
-        [np.array(phsp_cut**2), [amp_weight]], axis=0
-    )
+    phsp_slice = np.concatenate([np.array(phsp_cut**2), [amp_weight]], axis=0)
     phsps = adapter.split_data(phsp_slice)
     datas = adapter.split_data(data_cut**2)
     bound = adapter.get_bounds()

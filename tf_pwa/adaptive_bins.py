@@ -81,8 +81,9 @@ class AdaptiveBound(object):
         """split data in the order of data value
 
         >>> data = np.array([1.0, 2.0, 1.4, 3.1])
-        >>> AdaptiveBound.single_split_bound(data)
-        [(1.0, 1.7...), (1.7..., 3.1...)]
+        >>> bound = AdaptiveBound.single_split_bound(data)
+        >>> [(float(i[0]+1e-6), float(i[1]+1e-6)) for i in bound]
+        [(1.0..., 1.7...), (1.7..., 3.1...)]
 
         """
         if base_bound is None:
@@ -102,7 +103,7 @@ class AdaptiveBound(object):
 
         >>> data = np.array([[1.0, 2.0, 1.4, 3.1], [2.0, 1.0, 3.0, 1.0]])
         >>> bound, _ = AdaptiveBound.multi_split_bound(data, [2, 1])
-        >>> [(i[0][0]+1e-6, i[1][0]+1e-6) for i in bound]
+        >>> [(float(i[0][0]+1e-6), float(i[1][0]+1e-6)) for i in bound]
         [(1.0..., 1.7...), (1.7..., 3.1...)]
 
         """

@@ -400,6 +400,7 @@ def get_matrix_interp1d3(x, xi):
     N = len(xi) - 1
     zeros = tf.zeros_like(x)
     ones = tf.ones_like(x)
+
     # @pysnooper.snoop()
     def poly_i(i):
         tmp = zeros
@@ -620,6 +621,7 @@ def get_matrix_interp1d3_v2(x, xi):
     N = len(xi) - 1
     zeros = tf.zeros_like(x)
     ones = tf.ones_like(x)
+
     # @pysnooper.snoop()
     def poly_i(i):
         tmp = zeros

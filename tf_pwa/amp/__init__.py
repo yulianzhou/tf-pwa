@@ -12,6 +12,7 @@ DecayGroup: addition (+)
 from .amp import AmplitudeModel, create_amplitude
 from .base import *
 from .core import *
+from .dispersion_integral import DispersionIntegralParticle
 from .flatte import ParticleFlatte
 from .Kmatrix import KmatrixSingleChannelParticle
 from .kmatrix_simple import KmatrixSimple

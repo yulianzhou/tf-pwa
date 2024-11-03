@@ -1,6 +1,7 @@
 """
 This module implements classes to describe particles and decays.
 """
+
 import functools
 from collections import UserList
 

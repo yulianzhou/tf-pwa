@@ -402,3 +402,178 @@ def get_bprime_coeff(l):
     coeffs = Hjw2.as_dict()
     ret = [coeffs.get((2 * l - 2 * i,), 0) for i in range(l + 1)]
     return ret
+
+
+def complex_q(s, m1, m2):
+    q2 = (s - (m1 + m2) ** 2) * (s - (m1 - m2) ** 2) / (4 * s)
+    q = tf.sqrt(tf.complex(q2, tf.zeros_like(q2)))
+    return q
+
+
+def chew_mandelstam(m, m1, m2):
+    """
+    Chew-Mandelstam function in `PDG 2024 Eq 50.44 <https://pdg.lbl.gov/2024/reviews/rpp2024-rev-resonances.pdf>`_ multiply :math:`16\\pi` factor.
+
+    .. math::
+        \\Sigma(m) = \\frac{1}{\\pi}\\left[
+            \\frac{2q}{m} \\ln \\left(\\frac{ m_1^2 + m_2^2 - m^2 + 2mq }{ 2 m_1 m_2}\\right)
+            - (m_1^2 - m_2^2) (\\frac{1}{m^2} - \\frac{1}{(m_1+m_2)^2}) \\ln \\frac{m_1}{m_2}
+        \\right]
+
+    for :math:`m>(m_1+m_2)`
+
+    .. math::
+         Im\\Sigma(m) = \\frac{1}{i}\\frac{1}{\\pi} \\frac{2q}{m} \\ln (-1) = \\frac{2q}{m}
+
+    .. math::
+         Re\\Sigma(m) = \\frac{1}{\\pi}\\left[
+            \\frac{2q}{m} \\ln \\left( \\frac{ m^2 - m_1^2 - m_2^2 - 2mq }{ 2 m_1 m_2}\\right)
+            - (m_1^2 - m_2^2) (\\frac{1}{m^2} - \\frac{1}{(m_1+m_2)^2}) \\ln \\frac{m_1}{m_2}
+        \\right]
+
+
+    """
+    s = m * m
+    C = lambda x: tf.complex(x, tf.zeros_like(x))
+    m1 = tf.cast(m1, s.dtype)
+    m2 = tf.cast(m2, s.dtype)
+    q = complex_q(s, m1, m2)
+    s1 = m1 * m1
+    s2 = m2 * m2
+    a = (
+        C(2 / m)
+        * q
+        * tf.math.log((C(s1 + s2 - s) + C(2 * m) * q) / C(2 * m1 * m2))
+    )
+    b = (s1 - s2) * (1 / s - 1 / (m1 + m2) ** 2) * tf.math.log(m1 / m2)
+    ret = a - C(b)
+    return ret / math.pi
+
+
+def chew_mandelstam_l(m, m1, m2, l):
+    """
+
+    TODO. Function from `J.Math.Phys. 25 (1984) 3540 <https://inspirehep.net/literature/182258>`_ , with some modifies to be same as `chew_mandelstam` function.
+
+    compare with `chew_mandelstam` function.
+
+
+    :math:`m_1=0.4, m_2=0.1`
+
+    .. plot::
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> from tf_pwa.breit_wigner import chew_mandelstam, chew_mandelstam_l
+        >>> m = np.linspace(0.3, 2.0)
+        >>> y1 = chew_mandelstam_l(m, 0.4, 0.1, l=0)
+        >>> y2 = chew_mandelstam(m, 0.4, 0.1)
+        >>> _ = plt.plot(m, np.real(y1), label="Re $C_0(m)$")
+        >>> _ = plt.plot(m, np.imag(y1), label="Im $C_0(m)$")
+        >>> _ = plt.plot(m, np.real(y1)-np.mean(np.real(y1-y2)), label="Re $C_0(m) - \\delta$")
+        >>> _ = plt.plot(m, np.real(y2), ls="--", label="Re $\\Sigma(m)$")
+        >>> _ = plt.plot(m, np.imag(y2), ls="--", label="Im $\\Sigma(m)$")
+        >>> _ = plt.legend()
+
+    :math:`m_1=m_2=0.4`
+
+    .. plot::
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> from tf_pwa.breit_wigner import chew_mandelstam, chew_mandelstam_l
+        >>> m = np.linspace(0.3, 2.0)
+        >>> y1 = chew_mandelstam_l(m, 0.4, 0.4, l=0)
+        >>> y2 = chew_mandelstam(m, 0.4, 0.4)
+        >>> _ = plt.plot(m, np.real(y1), label="Re $C_0(m)$")
+        >>> _ = plt.plot(m, np.imag(y1), label="Im $C_0(m)$")
+        >>> _ = plt.plot(m, np.real(y1)-np.mean(np.real(y1-y2)), label="Re $C_0(m)- \\delta$")
+        >>> _ = plt.plot(m, np.real(y2), ls="--", label="Re $\\Sigma(m)$")
+        >>> _ = plt.plot(m, np.imag(y2), ls="--", label="Im $\\Sigma(m)$")
+        >>> _ = plt.legend()
+
+    .. plot::
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> from tf_pwa.breit_wigner import chew_mandelstam, chew_mandelstam_l
+        >>> m = np.linspace(0.3, 2.0)
+        >>> y1 = chew_mandelstam_l(m, 0.4, 0.1, l=0)
+        >>> y2 = chew_mandelstam_l(m, 0.4, 0.1, l=1)
+        >>> y3 = chew_mandelstam_l(m, 0.4, 0.1, l=2)
+        >>> _ = plt.plot(m, np.real(y1), label="Re $C_0(m)$")
+        >>> _ = plt.plot(m, np.imag(y1), label="Im $C_0(m)$")
+        >>> _ = plt.plot(m, np.real(y2), ls="--", label=" Re $C_1(m)$")
+        >>> _ = plt.plot(m, np.imag(y2), ls="--", label="Im $C_1(m)$")
+        >>> _ = plt.plot(m, np.real(y3), ls=":", label="Re $C_2(m)$")
+        >>> _ = plt.plot(m, np.imag(y3), ls=":", label="Im $C_2(m)$")
+        >>> _ = plt.legend()
+
+    """
+    s = m * m
+    C = lambda x: tf.complex(x, tf.zeros_like(x))
+    same_mass = abs(m1 - m2) < 1e-6
+    m1 = tf.cast(m1, s.dtype)
+    m2 = tf.cast(m2, s.dtype)
+    s1 = m1 * m1
+    s2 = m2 * m2
+    a = (m1 + m2) ** 2
+    b = (m1 - m2) ** 2
+    lam = (s - a) * (s - b) / s / s
+
+    lam_n = [lam**i for i in range(l + 1)]
+
+    ret_1_1 = 0
+    for r in range(l + 1):
+        ret_1_1 = ret_1_1 + lam_n[l - r] / (2 * r + 1)
+    ret_1 = (
+        -(
+            C(lam) ** (l + 0.5)
+            * (
+                tf.math.log(
+                    -(
+                        (
+                            (tf.sqrt(C(s - a)) + tf.sqrt(C(s - b)))
+                            / C(2 * tf.sqrt(m1 * m2))
+                        )
+                        ** (2)
+                    )
+                )
+            )
+            + C(ret_1_1)
+        )
+        / math.pi
+    )
+    # print(ret_1)
+    # return ret_1
+    if same_mass:  # b = 0
+        return ret_1
+
+    mu = (a - b) ** 2 / (16 * a * b)
+    nu = (a + b) / (2 * tf.sqrt(a * b))
+    omega = nu - tf.sqrt(a * b) / s
+    mu_n = [mu**i for i in range(l + 1)]
+
+    f1, f2 = [1], [1]
+    for i in range(1, l + 1):
+        f1.append(f1[-1] * i)
+        f2.append(f2[-1] * (2 * i - 1))  # TODO: (2n-1)!! for n=0?
+    Omega_n = [(-2) ** n * f2[n] / f1[n] for n in range(l + 1)]
+
+    ret_2_1 = omega * tf.math.log(m1 / m2) / math.pi
+    ret_2_2 = Omega_n[0] * lam_n[l]
+    for i in range(1, l + 1):
+        ret_2_2 = ret_2_2 + Omega_n[i] * lam_n[l - i] * mu_n[i]
+    ret_2 = ret_2_1 * ret_2_2
+    ret_3_1 = omega * nu / 2 / math.pi
+    ret_3_2 = 0
+    for p in range(1, l + 1):
+        ret_3_2_1 = 0
+        for q in range(l - p + 1):
+            ret_3_2_1 = ret_3_2_1 + Omega_n[q] * lam_n[l - p - q] * mu_n[q]
+        ret_3_2_2 = 0
+        for r in range(p - 1):
+            ret_3_2_2 = ret_3_2_2 + Omega_n[r] * mu_n[r]
+        ret_3_2 = ret_3_2 + ret_3_2_1 * ret_3_2_2 / p
+    ret_3 = ret_3_1 * ret_3_2
+    return ret_1 + C(ret_2 + ret_3)

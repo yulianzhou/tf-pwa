@@ -890,11 +890,15 @@ class HelicityDecay(AmpDecay):
         if out_sym:
             from sympy.physics.quantum.cg import CG
 
-            sint = lambda x: sym.simplify(_spin_int(x * 2)) / 2
+            sint = (
+                lambda x: sym.simplify(sym.sign(x) * _spin_int(abs(x) * 2)) / 2
+            )
             sqrt = lambda x: sym.sqrt(sint(x))
 
-            def my_cg_coef(a, b, c, d, e, f):
-                return CG(*list(map(sint, [a, c, b, d, e, f]))).doit()
+            def my_cg_coef(j1, j2, m1, m2, j3, m3):
+                ret = CG(*list(map(sint, [j1, m1, j2, m2, j3, m3]))).doit()
+                print(j1, j2, m1, m2, j3, m3, ret)
+                return ret
 
             ret = ret.tolist()
         for i, ls_i in enumerate(ls):

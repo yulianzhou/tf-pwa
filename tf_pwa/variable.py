@@ -1,6 +1,7 @@
 """
 This module implements classes and methods to manage the variables in fitting.
 """
+
 import contextlib
 import warnings
 

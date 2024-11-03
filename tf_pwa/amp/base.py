@@ -2,7 +2,6 @@
 Basic amplitude model
 """
 
-
 import numpy as np
 
 from tf_pwa.breit_wigner import (

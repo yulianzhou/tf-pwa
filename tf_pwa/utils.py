@@ -1,6 +1,7 @@
 """
 This module provides some functions that may be useful in other modules.
 """
+
 import functools
 import json
 import math
@@ -344,14 +345,14 @@ def fit_normal(data, weights=None):
     return np.array([mu, sigma]), np.array([mu_error, sigma_error])
 
 
-def create_test_config(model_name, params={}, plot_params={}):
+def create_test_config(model_name, params={}, plot_params={}, top_mass=1.0):
     from tf_pwa.config_loader import ConfigLoader
 
     config_dic = {
         "data": {"dat_order": ["B", "C", "D"]},
         "decay": {"A": [["R_BC", "D"]], "R_BC": ["B", "C"]},
         "particle": {
-            "$top": {"A": {"J": 0, "P": -1, "mass": 1.0}},
+            "$top": {"A": {"J": 0, "P": -1, "mass": top_mass}},
             "$finals": {
                 "B": {"J": 0, "P": -1, "mass": 0.1},
                 "C": {"J": 0, "P": -1, "mass": 0.1},
@@ -375,14 +376,21 @@ def create_test_config(model_name, params={}, plot_params={}):
 
 
 def plot_particle_model(
-    model_name, params={}, plot_params={}, axis=None, special_points=None
+    model_name,
+    params={},
+    plot_params={},
+    axis=None,
+    special_points=None,
+    mrange=(0.2, 0.9 - 1e-12),
 ):
     import matplotlib.pyplot as plt
     import numpy as np
 
-    config = create_test_config(model_name, params, plot_params)
+    config = create_test_config(
+        model_name, params, plot_params, top_mass=mrange[1] + 0.1 + 1e-12
+    )
     f = config.get_particle_function("R_BC")
-    m = np.linspace(0.2, 0.9 - 1e-12, 2000)
+    m = np.linspace(mrange[0], mrange[1], 2000)
     a = f(m).numpy()
     if special_points is not None:
         special_points = np.array(special_points)
@@ -404,7 +412,7 @@ def plot_particle_model(
         ax2.scatter(special_points, np.abs(at) ** 2)
     ax2.set_ylabel("$|A|^2$")
     ax2.set_ylim((0, None))
-    ax2.axvline(x=0.2, linestyle="--")
+    ax2.axvline(x=mrange[0], linestyle="--")
     ax2.yaxis.set_label_position("right")
     ax2.yaxis.tick_right()
     ax1.plot(np.real(a), m)

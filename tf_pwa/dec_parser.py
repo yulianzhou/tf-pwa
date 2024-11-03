@@ -1,6 +1,7 @@
 """
 module for parsing decay card :code:`*.dec` file
 """
+
 import re
 import warnings
 

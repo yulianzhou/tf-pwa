@@ -8,7 +8,6 @@ the phase of a and b arbitrary.
 
 """
 
-
 import numpy as np
 import tensorflow as tf
 

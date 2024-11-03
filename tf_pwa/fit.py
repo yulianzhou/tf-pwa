@@ -39,7 +39,6 @@ def fit_minuit(fcn, bounds_dict={}, hesse=True, minos=False, **kwargs):
 
 
 def fit_minuit_v1(fcn, bounds_dict={}, hesse=True, minos=False, **kwargs):
-
     """
 
     :param fcn:
@@ -91,7 +90,6 @@ def fit_minuit_v1(fcn, bounds_dict={}, hesse=True, minos=False, **kwargs):
 
 
 def fit_minuit_v2(fcn, bounds_dict={}, hesse=True, minos=False, **kwargs):
-
     """
 
     :param fcn:
@@ -226,6 +224,7 @@ def fit_scipy(
         maxiter = max(100 * len(x0), 2000)
     min_nll = 0.0
     ndf = fcn.vm.get_all_val(True)
+
     # maxiter = 0
     def v_g2(x0):
         f_g = fcn.vm.trans_fcn_grad(fcn.nll_grad)

@@ -98,7 +98,7 @@ def fmin_bfgs_f(
     Delta=10.0,
     maxiter=None,
     callback=None,
-    norm_ord=np.Inf,
+    norm_ord=np.inf,
     **_kwargs
 ):
     """test BFGS with nonmonote line search"""

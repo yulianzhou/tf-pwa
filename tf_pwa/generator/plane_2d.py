@@ -26,8 +26,7 @@ def _solve_2(a1, a2, x0, y):
     from numpy import sqrt
 
     return (
-        -a1
-        + sqrt(a1**2 + 4 * a1 * a2 * x0 + 4 * a2**2 * x0**2 + 4 * a2 * y)
+        -a1 + sqrt(a1**2 + 4 * a1 * a2 * x0 + 4 * a2**2 * x0**2 + 4 * a2 * y)
     ) / (2 * a2)
 
 

@@ -20,6 +20,7 @@ Each component is a path for root to a leaf.
 We can add some options to change the possible combination. (TODO)
 
 """
+
 import contextlib
 import itertools
 

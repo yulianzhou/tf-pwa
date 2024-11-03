@@ -29,9 +29,7 @@ def get_relative_p(ma, mb, mc):
 
 
 def get_relative_p2(ma, mb, mc):
-    return (
-        ((ma**2 - (mb + mc) ** 2) * (ma**2 - (mb - mc) ** 2)) / 4 / ma / ma
-    )
+    return ((ma**2 - (mb + mc) ** 2) * (ma**2 - (mb - mc) ** 2)) / 4 / ma / ma
 
 
 def BW_dom(m, m0, g0):
@@ -63,9 +61,7 @@ def BWR_LS_dom(m, m0, g0, thetas, ls, m1, m2, d=3.0, fix_bug1=False):
     p0 = get_relative_p2(m0, m1, m2)
 
     def bf_f(l):
-        bf = Bprime_polynomial(l, p0 * d**2) / Bprime_polynomial(
-            l, p * d**2
-        )
+        bf = Bprime_polynomial(l, p0 * d**2) / Bprime_polynomial(l, p * d**2)
         return (p / p0) ** l * bf
 
     g_head = sympy.I * m0 * g0 * m / m0 * sympy.sqrt(p / p0)

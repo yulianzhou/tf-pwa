@@ -49,6 +49,7 @@ The full data structure provided is ::
 Inner nodes are named as tuple of particles.
 
 """
+
 import itertools
 
 import numpy as np

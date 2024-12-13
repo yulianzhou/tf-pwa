@@ -296,6 +296,8 @@ class DecayConfig(BaseConfig):
                                 flag_cc = False
                         if flag_cc:
                             chains_ccidx.append(len(chains_ccidx))
+            else:
+                ret.append(i)
         chains_ccidx.append(cc_num)
         self.decaygroup_ccidx = chains_ccidx
         print(chains_ccidx)

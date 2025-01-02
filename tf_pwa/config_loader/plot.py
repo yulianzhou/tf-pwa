@@ -33,7 +33,7 @@ def _reverse(gen, idx):
 
 def default_color_generator(color_first):
     colors = [
-        "red",
+        "pink",
         "orange",
         "purple",
         "springgreen",
@@ -838,7 +838,7 @@ def _plot_partial_wave(
             has_negative = has_negative or np.any(fitted_hist_ref.count < 0)
             legends.append(le2[0])
             legends_label.append("reference fit")
-        le2 = fitted_hist.draw(ax, label="total fit", color="black")
+        le2 = fitted_hist.draw(ax, label="total fit", color="red")
         has_negative = has_negative or np.any(fitted_hist.count < 0)
         legends.append(le2[0])
         legends_label.append("total fit")

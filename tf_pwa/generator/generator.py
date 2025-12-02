@@ -100,6 +100,7 @@ def multi_sampling(
         a.add_gen(data_shape(data))
         # print(a.eff, a.N_gen, max_weight)
         all_data.append(data)
+        print(len(all_data), flush=True)
 
     ret = data_merge(*all_data)
 
@@ -122,6 +123,7 @@ def single_sampling2(phsp, amp, N, max_weight=None, importance_f=None):
     if importance_f is not None:
         weight = weight / importance_f(data)
     new_max_weight = tf.reduce_max(weight)
+    # new_max_weight = max_weight
     if max_weight is None or max_weight < new_max_weight:
         max_weight = new_max_weight * 1.01
     rnd = tf.random.uniform(weight.shape, dtype=weight.dtype)

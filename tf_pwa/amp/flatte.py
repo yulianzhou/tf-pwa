@@ -388,3 +388,124 @@ It has the same options as `FlatteGen`.
 
     def get_coeff(self):
         return [i() ** 2 for i in self.g_value]
+
+
+@register_particle("CoupleChannel")
+class ParticleCoupleChannel(Particle):
+    """
+
+.. math::
+
+    R(m) = \\frac{1}{m_0^2 - m^2 - i m_0 [\\sum_{i}  g_i \\frac{q_i}{m} \\times \\frac{m_0}{|q_{i0}|} \\times \\frac{|q_i|^{2l_i}}{|q_{i0}|^{2l_i}} B_{l_i}'^2(|q_i|,|q_{i0}|,d)]}
+
+.. math::
+
+    q_i = \\begin{cases}
+    \\frac{\\sqrt{(m^2-(m_{i,1}+m_{i,2})^2)(m^2-(m_{i,1}-m_{i,2})^2)}}{2m} & (m^2-(m_{i,1}+m_{i,2})^2)(m^2-(m_{i,1}-m_{i,2})^2) >= 0 \\\\
+    \\frac{i\\sqrt{|(m^2-(m_{i,1}+m_{i,2})^2)(m^2-(m_{i,1}-m_{i,2})^2)|}}{2m} & (m^2-(m_{i,1}+m_{i,2})^2)(m^2-(m_{i,1}-m_{i,2})^2) < 0 \\\\
+    \\end{cases}
+
+Required input arguments `mass_list: [[m11, m12], [m21, m22]]` for :math:`m_{i,1}, m_{i,2}`. And addition arguments `l_list: [l1, l2]` for :math:`l_i`
+
+    """
+    def __init__(
+        self,
+        *args,
+        mass_list=None,
+        l_list=None,
+        has_bprime=True,
+        cut_phsp=True,
+        **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        if mass_list is None:
+            raise ValueError("required mass_list: [[a, b], [mc, md]]")
+        self.mass_list = mass_list
+        self.g_value = []
+        self.float_list = list(kwargs.get("float", []))
+        if l_list is None:
+            l_list = [0] * len(self.mass_list)
+        self.l_list = l_list
+        self.has_bprime = has_bprime
+        self.cut_phsp = cut_phsp
+
+    def init_params(self):
+        self.d = 3.0
+        if self.mass is None:
+            self.mass = self.add_var("mass", fix=True)
+        else:
+            if not isinstance(self.mass, Variable):
+                if "m" in self.float_list:
+                    self.mass = self.add_var(
+                        "mass", value=self.mass, fix=False
+                    )
+                else:
+                    self.mass = self.add_var("mass", value=self.mass, fix=True)
+        if self.width is None:
+            self.width = self.add_var("width", fix=True)
+        else:
+            if not isinstance(self.width, Variable):
+                if "g" in self.float_list:
+                    self.width = self.add_var(
+                        "width", value=self.width, fix=False
+                    )
+                else:
+                    self.width = self.add_var("width", value=self.width, fix=True)
+        self.g_value = []
+        for i, mab in enumerate(self.mass_list):
+            name = f"g_{i}"
+            if hasattr(self, name):
+                if name in self.float_list:
+                    self.g_value.append(
+                        self.add_var(
+                            f"g_{i}", value=getattr(self, name), fix=False
+                        )
+                    )
+                else:
+                    self.g_value.append(
+                        self.add_var(
+                            f"g_{i}", value=getattr(self, name), fix=True
+                        )
+                    )
+            else:
+                self.g_value.append(self.add_var(f"g_{i}"))
+
+    def __call__(self, m):
+        return self.get_amp({"m": m})
+
+    def get_coeff(self):
+        return [i() for i in self.g_value]
+
+    def get_amp(self, *args, **kwargs):
+        m = args[0]["m"]
+        mass = self.get_mass()
+        width = self.get_width()
+        zeros = tf.zeros_like(m)
+        delta_s = mass * mass - m * m
+        m_c = mass / m
+        rhos = []
+        gi = self.get_coeff()
+        for i, (mab, l) in enumerate(zip(self.mass_list, self.l_list)):
+            ma, mb = mab
+            pi = cal_monentum(m, ma, mb)
+            pi0 = cal_monentum(mass, ma, mb)
+            m_rho_i = pi / pi0 * tf.complex(zeros, mass * width * gi[i] * m_c)
+            if self.has_bprime:
+                from tf_pwa.breit_wigner import Bprime_q2
+
+                bf = (
+                    Bprime_q2(l, tf.abs(pi) ** 2, tf.abs(pi0) ** 2, self.d)
+                    ** 2
+                )
+                m_rho_i = m_rho_i * tf.complex(bf, zeros)
+            if self.cut_phsp:
+                m_rho_i = tf.where(
+                    m < ma + mb, tf.zeros_like(m_rho_i), m_rho_i
+                )
+            rhos.append(m_rho_i)
+        rho = -1 * sum(rhos)
+        re = delta_s + tf.math.real(rho)
+        im = tf.math.imag(rho)
+        d = re * re + im * im
+        ret = tf.complex(re / d, -im / d)
+        return ret

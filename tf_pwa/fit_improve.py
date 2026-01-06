@@ -99,7 +99,7 @@ def fmin_bfgs_f(
     maxiter=None,
     callback=None,
     norm_ord=np.inf,
-    **_kwargs
+    **_kwargs,
 ):
     """test BFGS with nonmonote line search"""
     fk, gk = f_g(x0)

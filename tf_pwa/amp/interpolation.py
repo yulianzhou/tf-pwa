@@ -61,8 +61,8 @@ class InterpolationParticle(Particle):
     def get_point_values(self):
         p = self.point_value()
         if self.with_bound:
-            v_r = [tf.math.real(i) for i in p]
-            v_i = [tf.math.imag(i) for i in p]
+            v_r = [tf.math.real(i) for i in tf.unstack(p)]
+            v_i = [tf.math.imag(i) for i in tf.unstack(p)]
         else:
             v_r = [0.0] + [tf.math.real(i) for i in p] + [0.0]
             v_i = [0.0] + [tf.math.imag(i) for i in p] + [0.0]
@@ -89,12 +89,47 @@ class InterpolationParticle(Particle):
         return bin_idx
 
 
+def create_width_interp_class(cls):
+
+    class _WidthInterp(cls):
+        def init_params(self):
+            Particle.init_params(self)
+            super().init_params()
+
+        def convert_to_amp(self, m, fm):
+            m0 = self.get_mass()
+            g0 = self.get_width()
+
+            delta = m0**2 - m**2
+            fm0 = self.interp(tf.stack([m0]))[0]
+            refm0 = tf.math.real(fm0)
+            imfm0 = tf.math.imag(fm0)
+            if getattr(self, "width_scale", False):
+                g0 = g0 / imfm0
+            re = delta - m0 * g0 * (tf.math.real(fm) - refm0)
+            im = m0 * g0 * tf.math.imag(fm)
+            dom = re * re + im * im
+            return tf.complex(re / dom, im / dom)
+
+        def get_amp(self, data, *args, **kwargs):
+            m = data["m"]
+            fm = self.interp(m)
+            return self.convert_to_amp(m, fm)
+
+        def __call__(self, mass):
+            fm = self.interp(mass)
+            return self.convert_to_amp(mass, fm)
+
+    return _WidthInterp
+
+
+@register_particle("linear_txt")
 @register_particle("linear_npy")
 class InterpLinearNpy(InterpolationParticle):
     """
 
-    Linear interpolation model from a `.npy` file with array of [mi, re(ai), im(ai)].
-    Required `file: path_of_file.npy`, for the path of `.npy` file.
+    Linear interpolation model from a `.txt` file with array of [mi, re(ai), im(ai)].
+    Required `file: path_of_file.txt`, for the path of `.txt` file. It also support `.npy` file.
 
     The example is `exp(5 I m)`.
 
@@ -122,7 +157,10 @@ class InterpLinearNpy(InterpolationParticle):
 
     def get_data(self, **kwargs):
         self.input_file = kwargs.get("file")
-        return np.load(self.input_file)
+        if self.input_file.endswith(".npy"):
+            return np.load(self.input_file)
+        else:
+            return np.loadtxt(self.input_file)
 
     def init_params(self):
         pass
@@ -149,10 +187,20 @@ class InterpLinearNpy(InterpolationParticle):
         return tf.where(cut, tf.zeros_like(ret), ret)
 
 
-@register_particle("linear_txt")
-class InterpLinearTxt(InterpLinearNpy):
-    """Linear interpolation model from a `.txt` file with array of [mi, re(ai), im(ai)].
-    Required `file: path_of_file.txt`, for the path of `.txt` file.
+@register_particle("width_linear_txt")
+@register_particle("width_linear_npy")
+class WidthInterpLinearNpy(create_width_interp_class(InterpLinearNpy)):
+    """
+    Linear interpolation model from a `.txt` file with array of [mi, re(gi), im(gi)].
+    Required `file: path_of_file.txt`, for the path of `.txt` file. It also support `.npy` file.
+
+    Using interpolation for :math:`\\Pi(m)`.
+
+    .. math::
+
+        f(m) = \\frac{1}{m_0^2 - m^2 - m_0 \\Gamma_0 (Re \\Pi(m) - Re \\Pi(m_0) + i Im \\Pi(m))}
+
+    Additional option `width_scale: True`, will use :math:`\\Pi(m)/Im \\Pi(m_0)` instead of :math:`\\Pi(m)` to have a normal width value.
 
     The example is `exp(5 I m)`.
 
@@ -162,17 +210,16 @@ class InterpLinearTxt(InterpLinearNpy):
         >>> import numpy as np
         >>> from tf_pwa.utils import plot_particle_model
         >>> a = tempfile.mktemp(".txt")
-        >>> m = np.linspace(0.2, 0.9, 51)
+        >>> m = np.linspace(0.2-1e-6, 0.9, 51)
         >>> mi = m[::5]
         >>> np.savetxt(a, np.stack([mi, np.cos(mi*5), np.sin(mi*5)], axis=-1))
-        >>> axs = plot_particle_model("linear_txt", {"file": a})
-        >>> _ = axs[3].plot(np.cos(m*5), np.sin(m*5), "--")
+        >>> axs = plot_particle_model("width_linear_txt", {"mass": 0.5, "width": 0.2,"file": a})
+        >>> _ = plot_particle_model("width_linear_txt", {"mass": 0.5, "width": 0.2, "width_scale": True, "file": a}, axis = axs)
+        >>> _ = axs[2].legend(["default", "width_scale=True"])
 
     """
 
-    def get_data(self, **kwargs):
-        self.input_file = kwargs.get("file")
-        return np.loadtxt(self.input_file)
+    pass
 
 
 @register_particle("interp")
@@ -502,7 +549,7 @@ class InterpHistIdx(HistParticle):
 
     The first and last are fixed to zero unless set :code:`with_bound: True`.
 
-    This is an example of :math:`k\exp (i k)` for point k.
+    This is an example of :math:`k\\exp (i k)` for point k.
 
     .. plot::
 
@@ -544,7 +591,7 @@ class Interp1DSplineIdx(InterpolationParticle):
 
     The first and last are fixed to zero unless set :code:`with_bound: True`.
 
-    This is an example of :math:`k\exp (i k)` for point k.
+    This is an example of :math:`k\\exp (i k)` for point k.
 
     .. plot::
 

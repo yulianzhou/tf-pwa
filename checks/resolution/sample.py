@@ -318,7 +318,11 @@ def main():
             # dat = ha.build_data(ms, costheta, phi)
 
             p4, w = random_sample(
-                config, decay_chain, toy, smear_method=results.method
+                config,
+                decay_chain,
+                toy,
+                particle=results.particle,
+                smear_method=results.method,
             )
             w = toy.get_weight() * w
             save_name = config.data.dic[name[:-4]]

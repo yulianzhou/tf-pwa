@@ -266,7 +266,7 @@ def plot_partial_wave(
     phsp_rec=None,
     cut_function=lambda x: 1,
     plot_function=None,
-    **kwargs
+    **kwargs,
 ):
     """
     plot partial wave plots
@@ -383,7 +383,8 @@ def _get_plot_partial_wave_input(
     cut_function=lambda x: 1,
     partial_waves_function=None,
     extra_plots=None,
-    **kwargs
+    amp=None,
+    **kwargs,
 ):
     """
     plot partial wave plots
@@ -434,7 +435,8 @@ def _get_plot_partial_wave_input(
     if self.config["data"].get("model", "auto") == "cfit":
         phsp = _get_cfit_eff_phsp(self, phsp, batch)
         phsp_rec = _get_cfit_eff_phsp(self, phsp_rec, batch)
-    amp = self.get_amplitude()
+    if amp is None:
+        amp = self.get_amplitude()
     self._Ngroup = len(data)
     ws_bkg = [
         None if bg_i is None else bg_i.get("weight", None) for bg_i in bg
@@ -476,7 +478,7 @@ def _get_plot_partial_wave_input(
         extra = prefix, plot_var_dic, chain_property, nll
         yield all_data, extra
     else:
-        combine_plot = self.config["plot"].get("combine_plot", True)
+        combine_plot = self.config.get("plot", {}).get("combine_plot", True)
         if not combine_plot:
             for dt, mc, sb, w_bkg, i in zip(
                 data, phsp, bg, ws_bkg, range(self._Ngroup)
@@ -590,7 +592,8 @@ def _cal_partial_wave(
     phsp_rec=None,
     cut_function=lambda x: 1,
     partial_waves_function=None,
-    **kwargs
+    data_index_prefix=(),
+    **kwargs,
 ):
     data_dict = {}
     phsp_dict = {}
@@ -668,6 +671,11 @@ def _cal_partial_wave(
             phsp_dict["MC_{0}_{1}_fit".format(i, name_i)] = cut_phsp * sr(
                 weight_i
             )
+        if data_index_prefix:
+            data = data_index(data, data_index_prefix)
+            phsp_rec = data_index(phsp_rec, data_index_prefix)
+            if bg is not None:
+                bg = data_index(bg, data_index_prefix)
         for name in plot_var_dic:
             readdata = plot_var_dic[name]["readdata"]
             idx = plot_var_dic[name].get("idx", (None,))
@@ -739,7 +747,7 @@ def _plot_partial_wave(
     dpi=300,
     force_legend_labels=None,
     labels=None,
-    **kwargs
+    **kwargs,
 ):
     # cmap = plt.get_cmap("jet")
     # N = 10
@@ -1171,9 +1179,9 @@ def _2d_plot_v2(
     nll=None,
     smooth=True,
     color_first=True,
-    **kwargs
+    **kwargs,
 ):
-    twodplot = self.config["plot"].get("2Dplot", {})
+    twodplot = self.plot_params.config.get("2Dplot", {})
     new_plot = {}
     for k, v in twodplot.items():
         if "&" in k:
@@ -1237,6 +1245,11 @@ def _2d_plot_v2(
         title = display
 
         plot_figs = v.get("plot_figs", ["data", "sidbanand", "fitted"])
+        add_dalitz_boundary = v.get("add_dalitz_boundary", [])
+        dalitz_boundary_style = v.get(
+            "dalitz_boundary_style",
+            {"color": "gray", "alpha": 0.5, "zorder": -10},
+        )
         name1 = v.get("xlabel", str(var_x))
         name2 = v.get("ylabel", str(var_y))
 
@@ -1245,6 +1258,13 @@ def _2d_plot_v2(
             plt.ylabel(name2)
             plt.xlim(x_range)
             plt.ylim(y_range)
+            if len(add_dalitz_boundary) == 4:
+                m0, m1, m2, m3 = add_dalitz_boundary
+                s12, s23 = _get_dalitz_boundary(m0, m1, m2, m3)
+                plt.plot(s12, s23, **dalitz_boundary_style)
+            elif len(add_dalitz_boundary) == 2:
+                s12, s23 = get_dalitz_boundary(self, *add_dalitz_boundary)
+                plt.plot(s12, s23, **dalitz_boundary_style)
 
         plt.clf()
         # data
@@ -1253,7 +1273,7 @@ def _2d_plot_v2(
             plt.scatter(data_1[cut], data_2[cut], s=1, alpha=0.8, label="data")
             plot_axis()
             plt.title(title, fontsize="xx-large")
-            plt.savefig(prefix + k + "_data")
+            plt.savefig(prefix + k + "_data." + format)
             plt.clf()
             print("Finish plotting 2D data " + prefix + k)
         if "data_hist" in plot_figs:
@@ -1268,7 +1288,7 @@ def _2d_plot_v2(
             plot_axis()
             plt.title(title, fontsize="xx-large")
             plt.colorbar()
-            plt.savefig(prefix + k + "_data_hist")
+            plt.savefig(prefix + k + "_data_hist." + format)
             plt.clf()
             print("Finish plotting 2D data_hist " + prefix + k)
         # sideband
@@ -1281,7 +1301,7 @@ def _2d_plot_v2(
                 )
                 plot_axis()
                 plt.title(title, fontsize="xx-large")
-                plt.savefig(prefix + k + "_bkg")
+                plt.savefig(prefix + k + "_bkg." + format)
                 plt.clf()
                 print("Finish plotting 2D sideband " + prefix + k)
             else:
@@ -1302,7 +1322,7 @@ def _2d_plot_v2(
                 plot_axis()
                 plt.title(title, fontsize="xx-large")
                 plt.colorbar()
-                plt.savefig(prefix + k + "_bkg_hist")
+                plt.savefig(prefix + k + "_bkg_his." + format)
                 plt.clf()
                 print("Finish plotting 2D sideband histogram " + prefix + k)
             else:
@@ -1321,7 +1341,7 @@ def _2d_plot_v2(
             plot_axis()
             plt.title(title, fontsize="xx-large")
             plt.colorbar()
-            plt.savefig(prefix + k + "_fitted")
+            plt.savefig(prefix + k + "_fitted." + format)
             plt.clf()
             print("Finish plotting 2D fitted " + prefix + k)
         if "pull" in plot_figs:
@@ -1342,7 +1362,7 @@ def _2d_plot_v2(
                 scatter_style=pull_scatter_style,
             )
             plot_axis()
-            plt.savefig(prefix + k + "_pull")
+            plt.savefig(prefix + k + "_pull." + format)
             plt.clf()
             print("Finish plotting 2D pull " + prefix + k)
 
@@ -1382,18 +1402,25 @@ def get_dalitz(config, a, b):
     return m0, m1, m2, m3
 
 
-@ConfigLoader.register_function()
-def get_dalitz_boundary(config, a, b, N=1000):
-    dalitz = get_dalitz(config, a, b)
-    assert dalitz is not None, "not valid daliz plot"
-    m0, m1, m2, m3 = dalitz
-    # print(m0, m1, m2, m3)
+def _get_dalitz_boundary(m0, m1, m2, m3, N=1000):
     from tf_pwa.angle import kine_min_max
 
     s12_min, s12_max = float(m1 + m2), float(m0 - m3)
     s12 = np.linspace(s12_min**2, s12_max**2, N)
     s23_min, s23_max = kine_min_max(s12, *map(float, [m0, m1, m2, m3]))
     return s12, np.stack([s23_min, s23_max], axis=-1)
+
+
+@ConfigLoader.register_function()
+def get_dalitz_boundary(config, a, b, N=1000):
+    dalitz = get_dalitz(config, a, b)
+    assert dalitz is not None, "not valid daliz plot"
+    m0, m1, m2, m3 = dalitz
+    # print(m0, m1, m2, m3)
+    dalitz = get_dalitz(config, a, b)
+    assert dalitz is not None, "not valid daliz plot"
+    m0, m1, m2, m3 = dalitz
+    return _get_dalitz_boundary(m0, m1, m2, m3, N=N)
 
 
 def plot_function_2dpull(
@@ -1409,7 +1436,7 @@ def plot_function_2dpull(
     plot_scatter=True,
     scatter_style={"s": 1, "c": "black"},
     cmap="jet",
-    **kwargs
+    **kwargs,
 ):
     import matplotlib as mpl
     import matplotlib.colors as mcolors
@@ -1506,7 +1533,7 @@ def plot_adaptive_2dpull(
     cut_zero=True,
     plot_scatter=True,
     scatter_style={"s": 1, "c": "black"},
-    **kwargs
+    **kwargs,
 ):
     pull_kwargs = {
         "var1": var1,

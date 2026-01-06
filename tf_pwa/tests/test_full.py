@@ -144,6 +144,15 @@ def test_save_model(toy_config):
     config.save_tensorflow_model("toy_data/model")
 
 
+def test_fit_no_params(gen_toy):
+    config = ConfigLoader(f"{this_dir}/config_no_params.yml")
+    config.fit()
+    config.get_params_error(method="default")
+    config.cal_fitfractions(method="old")
+    config.cal_fitfractions(method="new")
+    config.generate_phsp(10)
+
+
 def test_cfit(gen_toy):
     config = ConfigLoader(f"{this_dir}/config_cfit.yml")
     config.set_params(f"{this_dir}/gen_params.json")
@@ -194,9 +203,13 @@ def test_cfit(gen_toy):
 
 def test_sdp_gen(gen_toy):
     config = ConfigLoader(f"{this_dir}/config_cfit.yml")
+    top = config.get_decay().top
     config.generate_SDP_p("R_BC", 10, legacy=True)
     config.generate_SDP("R_BC", 10)
     config.generate_SDP_p("R_BC", 10, legacy=False)
+    top.data_mass = top.get_mass() + 0.1
+    data = config.generate_SDP("R_BC", 10)
+    assert np.allclose(data["particle"][top]["m"], top.data_mass)
 
 
 def test_precached(gen_toy):
@@ -333,6 +346,9 @@ def test_fit(toy_config, fit_result):
     fit_result.save_as("toy_data/final_params.json")
     fit_frac, frac_err = toy_config.cal_fitfractions()
     fit_frac, frac_err = toy_config.cal_fitfractions(method="new")
+    fit_frac_obj = toy_config.cal_fitfractions(
+        method="new", res=["R_BC", ["R_BD", "R_CD"]]
+    )
     save_frac_csv("toy_data/fit_frac.csv", fit_frac)
 
     with toy_config.params_trans() as pt:
@@ -353,6 +369,23 @@ def test_fit(toy_config, fit_result):
         x = a + b
         y = a - b
     xy_err2 = pt.get_error({"a": [x, y]})
+
+    bak_inv_he = toy_config.inv_he
+    with pytest.raises(ValueError):
+        toy_config.inv_he = None
+        with toy_config.params_trans() as pt:
+            a = pt["A->R_BC.D_g_ls_1r"]
+            y = a + 1
+        xy_err2 = pt.get_error({"a": [y]})
+    with pytest.raises(ValueError):
+        toy_config.inv_he = None
+        with toy_config.params_trans() as pt:
+            a = pt["A->R_BC.D_g_ls_1r"]
+            b = pt["A->R_BC.D_g_ls_1i"]
+            x = a + b
+            y = a - b
+        xy_err = pt.get_error_matrix([x, y])
+    toy_config.inv_he = bak_inv_he
 
     # mask params for fit fraction
     amp = toy_config.get_amplitude()
@@ -404,14 +437,6 @@ def test_bacth_sum(toy_config, fit_result):
     assert np.allclose(frac_err, [fit_frac_err[str(i)] for i in res])
 
 
-def test_lazycall(toy_config_lazy):
-    results = toy_config_lazy.fit(batch=100000)
-    assert np.allclose(results.min_nll, -204.9468493307786)
-    toy_config_lazy.plot_partial_wave(
-        prefix="toy_data/figure_lazy", batch=100000
-    )
-
-
 def test_cal_chi2(toy_config, fit_result):
     toy_config.cal_chi2(bins=[[2, 2]] * 2, mass=["R_BD", "R_CD"])
 
@@ -448,6 +473,41 @@ def test_mix_likelihood(toy_config3):
     results = toy_config3.fit(maxiter=1)
 
 
+def test_mix_config(gen_toy):
+    from tf_pwa.config_loader import MixConfig
+
+    config = MixConfig(
+        [f"{this_dir}/config_toy.yml", f"{this_dir}/config_toy.yml"],
+        total_same=True,
+    )
+    config.set_params(f"{this_dir}/exp_params.json")
+    config.plot_partial_wave(prefix="toy_data/mix_plot/")
+
+
+def test_mix_config_same_data(gen_toy):
+    from tf_pwa.config_loader import MixConfig
+
+    config = MixConfig(
+        [f"{this_dir}/config_toy.yml", f"{this_dir}/config_toy.yml"],
+        total_same=True,
+        same_data=True,
+    )
+    config.set_params(f"{this_dir}/exp_params.json")
+    config.plot_partial_wave(prefix="toy_data/mix_plot/", base_idx=1)
+
+
+def test_mix_config_no_scale(gen_toy):
+    from tf_pwa.config_loader import MixConfig
+
+    config = MixConfig(
+        [f"{this_dir}/config_toy.yml", f"{this_dir}/config_toy.yml"],
+        total_same=True,
+        no_scale=True,
+    )
+    config.set_params(f"{this_dir}/exp_params.json")
+    config.plot_partial_wave(prefix="toy_data/mix_plot/", base_idx=1)
+
+
 def test_cp_particles():
     config = ConfigLoader(f"{this_dir}/config_self_cp.yml")
     phsp = config.generate_phsp(100)
@@ -477,3 +537,22 @@ def test_factor_hel():
     amp(phsp)
     amp.get_amp_list_part(phsp)
     amp.decay_group.get_factor()
+
+
+def test_smear_params(toy_config, fit_result):
+    toy_config.get_params_error(fit_result)
+    phsp = toy_config.generate_phsp(10)
+    amp = toy_config.get_amplitude()
+    ret = []
+    for i in range(10):
+        with amp.temp_params(toy_config.gen_smear_params()):
+            ret.append(tf.reduce_sum(amp(phsp)).numpy())
+    std = np.std(ret)
+
+
+def test_simple_mlp(toy_config):
+    config = ConfigLoader(f"{this_dir}/config_bkg.yml")
+    amp = config.get_amplitude()
+    fcn = config.get_fcn()
+    fcn.nll_grad()
+    amp.partial_weight(config.get_data("phsp")[0])

@@ -405,3 +405,94 @@ def ls_selector_weight(decay, all_ls):
         if found:
             ret.append(i)
     return ret
+
+
+def covariant_hel_term_a(j, m):
+    r"""
+    Eq.34 in `PhysRevD.57.431 <https://inspirehep.net/literature/448883>`_.
+
+    .. math::
+        a^J(m) = \frac{(J+m)!(J-m)!}{(2J)!}
+
+    """
+    import math
+
+    f = lambda x: math.gamma(x + 1)
+    return f(j + m) * f(j - m) / f(2 * j)
+
+
+def covariant_hel_term_b(j, m, m0):
+    r"""
+    Eq.37 in `PhysRevD.57.431 <https://inspirehep.net/literature/448883>`_.
+
+    .. math::
+        2 m_{\pm} = J \pm m - m_0
+
+    .. math::
+        b^J(m, m_0) = \frac{J!}{m_{+}! m_0! m_{-}!}
+
+    """
+    import math
+
+    f = lambda x: math.gamma(x + 1)
+    mp = (j + m - m0) // 2
+    mm = (j - m - m0) // 2
+    return f(j) / (f(mp) * f(m0) * f(mm))
+
+
+@functools.lru_cache()
+def covariant_hel_term_build_coeffs(j, spins):
+    r"""
+    coefficients of Eq.52 in `PhysRevD.57.431 <https://inspirehep.net/literature/448883>`_.
+
+    .. math::
+        f_{m,m0}^{s} = a^J(\lambda) b^{J} (m, m0) (2)^{m_0}
+
+    >>> coeffs = covariant_hel_term_build_coeffs(2, (0,))[0]
+    >>> abs(coeffs[0][1] - 2/3) < 1e-6 and abs(coeffs[1][1] - 1/3) < 1e-6
+    ...
+    True
+
+    >>> coeffs = covariant_hel_term_build_coeffs(4, (-1,1))[0]
+    >>> abs(coeffs[0][1] - 4/7) < 1e-6 and abs(coeffs[1][1] - 3/7) < 1e-6
+    ...
+    True
+
+
+    """
+
+    ret = []
+    for m in spins:
+        m = abs(m)
+        m0 = j - m
+        coeffs = []
+        a = covariant_hel_term_a(j, m)
+        while m0 >= 0:
+            b = covariant_hel_term_b(j, m, m0)
+            coeffs.append((m0, a * b * 2**m0))
+            m0 -= 2
+        ret.append(coeffs)
+    return ret
+
+
+def covariant_hel_term(j, spins, gamma):
+    r"""
+    Eq.52 in `PhysRevD.57.431 <https://inspirehep.net/literature/448883>`_.
+
+    .. math::
+        f_{m}^{s}(\gamma) = a^J(\lambda)\sum_{m0} b^{J} (m, m0) (2\gamma)^{m_0}
+
+    """
+    assert int(j) == j, "not supprot j = {}".format(j)
+    all_coeffs = covariant_hel_term_build_coeffs(int(j), tuple(spins))
+    ret = []
+    zeros = tf.zeros_like(gamma)
+    gamma_p = {0: tf.ones_like(gamma)}
+    for coeffs in all_coeffs:
+        tmp = zeros
+        for p, k in coeffs:
+            if p not in gamma_p:
+                gamma_p[p] = gamma**p
+            tmp = tmp + k * gamma_p[p]
+        ret.append(tmp)
+    return tf.stack(ret, axis=-1)

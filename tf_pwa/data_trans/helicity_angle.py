@@ -3,6 +3,7 @@ import tensorflow as tf
 
 from tf_pwa.amp import get_relative_p
 from tf_pwa.angle import LorentzVector as lv
+from tf_pwa.data import data_index
 
 
 class HelicityAngle1:
@@ -29,7 +30,7 @@ class HelicityAngle1:
         """generate monmentum with M_name = m"""
         m = tf.convert_to_tensor(m, tf.float64)
         ms = [
-            i.core.get_mass() if str(i.core) != str(name) else m
+            i.core.get_data_mass() if str(i.core) != str(name) else m
             for i in self.decay_chain
         ]
         ms.append(self.par[-1].get_mass())
@@ -73,24 +74,41 @@ class HelicityAngle:
         for i in self.decay_chain:
             for j in [i.core] + list(i.outs):
                 if j not in ms:
-                    if str(j) in replace_mass:
+                    if j in replace_mass:
+                        ms[j] = replace_mass[j]
+                    elif str(j) in replace_mass:
                         ms[j] = tf.convert_to_tensor(
                             replace_mass[str(j)], tf.float64
                         )
                     else:
-                        ms[j] = tf.convert_to_tensor(j.get_mass(), tf.float64)
+                        ms[j] = tf.convert_to_tensor(
+                            j.get_data_mass(), tf.float64
+                        )
         return ms
 
-    def generate_p_mass(self, name, m, random=False):
+    def create_ms(self, name, m=None):
+        if m is None:
+            if isinstance(name, dict):
+                ms = self.get_all_mass(name)
+                m = tf.convert_to_tensor(list(name.values())[0], tf.float64)
+            else:
+                raise ValueError("not support input for create_ms")
+        else:
+            m = tf.convert_to_tensor(m, tf.float64)
+            ms = self.get_all_mass({name: m})
+        return ms, m
+
+    def generate_p_mass(self, name, m=None, random=False):
         """generate monmentum with M_name = m"""
-        m = tf.convert_to_tensor(m, tf.float64)
-        ms = self.get_all_mass({name: m})
         data = {}
+        ms, m = self.create_ms(name, m)
 
         for i in self.decay_chain:
             data[i] = {}
             data[i]["|p|"] = get_relative_p(
-                ms[i.core], ms[i.outs[0]], ms[i.outs[1]]
+                data_index(ms, i.core),
+                data_index(ms, i.outs[0]),
+                data_index(ms, i.outs[1]),
             )
             if random:
                 costheta = np.random.random(m.shape) * 2 - 1
@@ -108,10 +126,13 @@ class HelicityAngle:
     def build_data(self, ms, costheta, phi):
         """generate monmentum with M_name = m"""
         data = {}
+        ms = self.get_all_mass(ms)
         for j, i in enumerate(self.decay_chain):
             data[i] = {}
             data[i]["|p|"] = get_relative_p(
-                ms[i.core], ms[i.outs[0]], ms[i.outs[1]]
+                data_index(ms, i.core),
+                data_index(ms, i.outs[0]),
+                data_index(ms, i.outs[1]),
             )
             costheta_i = costheta[j]
             phi_i = phi[j]
@@ -122,9 +143,8 @@ class HelicityAngle:
         # ret = self.generate_p(ms, costheta, phi)
         return ret  # dict(zip(self.par, ret))
 
-    def get_phsp_factor(self, name, m):
-        m = tf.convert_to_tensor(m, tf.float64)
-        ms = self.get_all_mass({name: m})
+    def get_phsp_factor(self, name, m=None):
+        ms, _ = self.create_ms(name, m)
         return self.eval_phsp_factor(ms)
 
     def eval_phsp_factor(self, ms):
@@ -142,13 +162,13 @@ class HelicityAngle:
         high_bound = None
         for i in self.decay_chain:
             if str(i.core) == name:
-                low_bound = sum([j.get_mass() for j in i.outs])
+                low_bound = sum([j.get_data_mass() for j in i.outs])
             if name in [str(j) for j in i.outs]:
                 sum_mass = 0.0
                 for j in i.outs:
                     if str(j) != name:
-                        sum_mass = sum_mass + j.get_mass()
-                high_bound = i.core.get_mass() - sum_mass
+                        sum_mass = sum_mass + j.get_data_mass()
+                high_bound = i.core.get_data_mass() - sum_mass
         return (low_bound, high_bound)
 
     def find_variable(self, dat):

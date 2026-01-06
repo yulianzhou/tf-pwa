@@ -77,3 +77,14 @@ def test_cift_constr_frac_model(gen_toy, toy_config):
     print(fcn())
     print(fcn.nll_grad())
     print(fcn.nll_grad_hessian(batch=600))
+
+
+def test_binning_chi2_model(gen_toy, toy_config):
+    with open(f"{this_dir}/config_binning_chi2.yml") as f:
+        dic = yaml.full_load(f)
+    config = ConfigLoader(dic)
+    fcn = config.get_fcn(batch=600)
+    print(fcn())
+    print(fcn.nll_grad())
+    # print(fcn.nll_grad_hessian(batch=600))
+    # config.fit()

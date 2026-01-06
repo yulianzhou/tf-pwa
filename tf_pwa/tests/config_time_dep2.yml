@@ -1,0 +1,48 @@
+data:
+  dat_order: [B, C, D]
+  extra_var:
+    time:
+      default: 0
+      low: 0.0
+      high: 10.0
+      model: uniform
+    tag:
+      a: [-1, 1]
+      default: 1
+      model: choice
+  amp_model: time_dep_params
+
+decay:
+  A:
+    - [R_BC, D, model: time_dep_params]
+    - [R_BD, C, model: time_dep_params]
+    - [R_CD, B, model: time_dep_params]
+  R_BC: [B, C]
+  R_BD: [B, D]
+  R_CD: [C, D]
+
+particle:
+  $top:
+    A: { J: 0, P: -1, mass: 5.2 }
+  $finals:
+    B: { J: 0, P: -1, mass: 0.13957 }
+    C: { J: 0, P: -1, mass: 0.13957 }
+    D: { J: 0, P: -1, mass: 1.86 }
+  R_BC: { J: 1, P: -1, mass: 1.0, width: 0.1 }
+  R_BD: { J: 1, P: -1, mass: 2.42, width: 0.03 }
+  R_CD: { J: 1, P: -1, mass: 2.42, width: 0.03 }
+
+constrains:
+  particle: null
+  decay: null
+
+plot:
+  config:
+    legend_outside: True
+  mass:
+    R_BC: { display: "$M_{BC}$" }
+    R_BD: { display: "$M_{BD}$" }
+    R_CD: { display: "$M_{CD}$" }
+  index:
+    time: { display: "time", range: [0, 10] }
+    tag: { display: "tag" }

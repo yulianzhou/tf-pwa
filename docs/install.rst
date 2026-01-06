@@ -84,7 +84,7 @@ Here we provide the simple way to install tensorflow2 gpu version in conda envir
 
 .. code::
 
-   conda install tensorflow-gpu=2.4
+   conda install tensorflow
 
 it will also install cudatoolkit.
 
@@ -97,7 +97,6 @@ When using `virtualenv`, there is also simple way to install tensorflow2
 
    python -m pip install tensorflow
 
-, but you should check you CUDA installation for GPU.
 
 .. note::
 
@@ -133,8 +132,8 @@ In conda environment, go into the directory of `tf-pwa`, you can install rest of
    conda install --file requirements-min.txt
 
 .. note::
-   we recommend Ampere card users to install with
-   `tensorflow_2_6_requirements.txt` (see this
+   some users with Ampere card can install with
+   `tensorflow_2_6_requirements.txt`  (see this
    `technical FAQ <https://tf-pwa.readthedocs.io/en/latest/tensorflow_version.html>`_).
 
    .. code::

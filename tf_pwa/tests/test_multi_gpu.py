@@ -13,4 +13,4 @@ def test_multigpu(gen_toy):
     fcn.nll_grad()
     data = config.get_data("data")[0]
     fcn.model._fast_nll_part_grad((data, data["weight"]), None)
-    return config
+    # return config

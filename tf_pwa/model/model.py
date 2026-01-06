@@ -1131,6 +1131,7 @@ class FCN(object):
         data,
         mcdata,
         bg=None,
+        mc_scale=1.0,
         batch=65000,
         inmc=None,
         gauss_constr={},
@@ -1156,10 +1157,13 @@ class FCN(object):
         self.batch = batch
         if mcdata.get("weight", None) is not None:
             mc_weight = tf.convert_to_tensor(mcdata["weight"], dtype="float64")
-            self.mc_weight = mc_weight / tf.reduce_sum(mc_weight)
+            self.mc_weight = mc_weight / tf.reduce_sum(mc_weight) * mc_scale
         else:
-            self.mc_weight = tf.convert_to_tensor(
-                [1 / n_mcdata] * n_mcdata, dtype="float64"
+            self.mc_weight = (
+                tf.convert_to_tensor(
+                    [1 / n_mcdata] * n_mcdata, dtype="float64"
+                )
+                * mc_scale
             )
 
         self.batch_weight = self._convert_batch(self.weight, self.batch)
@@ -1332,6 +1336,7 @@ class CombineFCN(object):
         model=None,
         data=None,
         mcdata=None,
+        mc_scale=None,
         bg=None,
         fcns=None,
         batch=65000,
@@ -1345,10 +1350,14 @@ class CombineFCN(object):
             self.cached_nll = 0.0
             if bg is None:
                 bg = _loop_generator(None)
-            for model_i, data_i, mcdata_i, bg_i in zip(
-                model, data, mcdata, bg
+            if mc_scale is None:
+                mc_scale = _loop_generator(1.0)
+            for model_i, data_i, mcdata_i, bg_i, s_i in zip(
+                model, data, mcdata, bg, mc_scale
             ):
-                self.fcns.append(FCN(model_i, data_i, mcdata_i, bg_i))
+                self.fcns.append(
+                    FCN(model_i, data_i, mcdata_i, bg_i, s_i, batch=batch)
+                )
         else:
             self.fcns = list(fcns)
         self.vm = self.fcns[0].vm
@@ -1476,6 +1485,7 @@ class MixLogLikehoodFCN(CombineFCN):
         data,
         mcdata,
         bg=None,
+        mc_scale=None,
         batch=65000,
         gauss_constr={},
     ):
@@ -1487,21 +1497,25 @@ class MixLogLikehoodFCN(CombineFCN):
         self.cached_nll = 0.0
         if bg is None:
             bg = _loop_generator(None)
+        if mc_scale is None:
+            mc_scale = _loop_generator(1.0)
         self.datas = []
         self.weight_phsps = []
         self.n_datas = []
         self.model = model
-        for model_i, data_i, mcdata_i, bg_i in zip(model, data, mcdata, bg):
+        for model_i, data_i, mcdata_i, bg_i, s_i in zip(
+            model, data, mcdata, bg, mc_scale
+        ):
             data_s = model_i.mix_data_bakcground(data_i, bg_i)
             self.datas.append(data_s)
             weight_phsp = type(mcdata_i)(
                 {k: v for k, v in mcdata_i.items()}
             )  # simple copy
             w = weight_phsp.get_weight()
-            weight_phsp["weight"] = w / tf.reduce_sum(w)
+            weight_phsp["weight"] = w / tf.reduce_sum(w) * s_i
             self.n_datas.append(tf.reduce_sum(data_s.get_weight()))
             self.weight_phsps.append(list(split_generator(weight_phsp, batch)))
-            self.fcns.append(FCN(model_i, data_i, mcdata_i, bg_i))
+            self.fcns.append(FCN(model_i, data_i, mcdata_i, bg_i, s_i))
         self.data_merge = list(split_generator(data_merge(*self.datas), batch))
         self.vm = self.model[0].vm
         self.gauss_constr = GaussianConstr(self.vm, gauss_constr)

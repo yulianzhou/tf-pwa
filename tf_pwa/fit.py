@@ -278,7 +278,12 @@ def fit_scipy(
         f_g = Cached_FG(f_g, grad_scale=grad_scale)
         # print(f_g)
         x0 = np.array(fcn.vm.get_all_val(True))
-        # print(x0, fcn.vm.get_all_dic())
+        if len(x0) == 0:
+            min_nll, _ = f_g(x0)
+            params = fcn.get_params()
+            return FitResult(
+                params, fcn, min_nll, ndf=0, success=True, hess_inv=None
+            )
         # s = minimize(f_g, x0, method='trust-constr', jac=True, hess=BFGS(), options={'gtol': 1e-4, 'disp': True})
         if method == "test":
             try:

@@ -1,5 +1,5 @@
 """
- Partial Wave Analysis program using Tensorflow
+Partial Wave Analysis program using Tensorflow
 
 """
 

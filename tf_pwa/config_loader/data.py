@@ -89,6 +89,7 @@ class SimpleData:
         self.scale_list = self.dic.get("scale_list", ["bg"])
         self.lazy_call = self.dic.get("lazy_call", False)
         self.lazy_file = self.dic.get("lazy_file", False)
+        self.preprocesser_var = self.dic.get("preprocesser_var", [])
         cp_trans = self.dic.get("cp_trans", True)
         center_mass = self.dic.get("center_mass", False)
         r_boost = self.dic.get("r_boost", True)
@@ -164,7 +165,11 @@ class SimpleData:
         weight_sign = self.get_weight_sign(idx)
         charge = self.dic.get(idx + "_charge", None)
         ret = self.load_data(
-            files, weight_sign=weight_sign, weight=weights, charge=charge
+            files,
+            weight_sign=weight_sign,
+            weight=weights,
+            charge=charge,
+            data_type=idx,
         )
         ret = self.process_scale(idx, ret)
         return ret
@@ -197,7 +202,7 @@ class SimpleData:
         p = load_dat_file(fnames, particles, mmap_mode=mmap_mode)
         return p
 
-    def cal_angle(self, p4, **kwargs):
+    def cal_angle(self, p4, data_type="data", **kwargs):
         if isinstance(p4, (list, tuple)):
             p4 = {k: v for k, v in zip(self.get_dat_order(), p4)}
         # charge = kwargs.get("charge_conjugation", None)
@@ -205,12 +210,20 @@ class SimpleData:
         if self.lazy_call:
             if self.lazy_file:
                 data = LazyCall(
-                    self.preprocessor, LazyFile({"p4": p4, "extra": kwargs})
+                    self.preprocessor,
+                    LazyFile({"p4": p4, "extra": kwargs}),
+                    data_type=data_type,
                 )
             else:
-                data = LazyCall(self.preprocessor, {"p4": p4, "extra": kwargs})
+                data = LazyCall(
+                    self.preprocessor,
+                    {"p4": p4, "extra": kwargs},
+                    data_type=data_type,
+                )
         else:
-            data = self.preprocessor({"p4": p4, "extra": kwargs})
+            data = self.preprocessor(
+                {"p4": p4, "extra": kwargs}, data_type=data_type
+            )
         return data
 
     def load_extra_var(self, n_data, **kwargs):
@@ -226,11 +239,18 @@ class SimpleData:
                 value = value[:n_data]
             else:
                 raise NotImplemented
+            if "dtype" in v:
+                value = tf.cast(value, v["dtype"])
             extra_var[v.get("key", k)] = value
         return extra_var
 
     def load_data(
-        self, files, weight_sign=1, weight_smear=None, **kwargs
+        self,
+        files,
+        weight_sign=1,
+        weight_smear=None,
+        data_type="data",
+        **kwargs,
     ) -> dict:
         # print(files, weights)
         if files is None:
@@ -245,9 +265,10 @@ class SimpleData:
             extra_var["weight"] = smear_function(
                 extra_var["weight"], **weight_smear
             )
-        data = self.cal_angle(p4, **extra_var)
+        data = self.cal_angle(p4, data_type=data_type, **extra_var)
         for k, v in extra_var.items():
-            data[k] = v
+            if k not in self.preprocesser_var:
+                data[k] = v
         return data
 
     def load_weight_file(self, weight_files):
@@ -434,7 +455,13 @@ class MultiData(SimpleData):
                 raise NotImplementedError
         smear = self.dic.get(idx + "_weight_smear", None)
         ret = [
-            self.load_data(i, weight_sign=weight_sign, weight_smear=smear, **k)
+            self.load_data(
+                i,
+                weight_sign=weight_sign,
+                weight_smear=smear,
+                data_type=idx,
+                **k,
+            )
             for i, k in zip(files, kwargs)
         ]
         if self._Ngroup == 0:

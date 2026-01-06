@@ -1,5 +1,9 @@
 Tensorflow and Cudatoolkit Version
 ----------------------------------
+
+.. note::
+   Due to the update of conda, tensorflow and the system of clusters, some information are out of date.
+
 1. **Why are there two separate conda requirements file?**
     - `requirements-min.txt` limits the tensorflow version up to `2.2`. Beyond this version, `conda` will install the wrong dependency versions, in particular `cudatoolkit` versions and sometimes `python3`.
     - `tensorflow_2_6_requirements.txt` manually selects the correct `python` and `cudatoolkit` versions to match the `tensorflow-2.6.0` build on `conda-forge`.

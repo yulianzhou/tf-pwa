@@ -39,7 +39,7 @@ You can check if pre-commit is working well by running:
 It may take some time to install required packages.
 
 .. note::
-   If there are some `GLIBC_XXX` errors at this step, you can try to install `node.js`.
+   If there are some `GLIBC_XXX` errors at this step, you can try to install `node.js`. (Since prettier is removed, it would be other problems.)
 
 .. note::
    For developers using an editor with a formatter, you should be careful about the options.
@@ -49,7 +49,7 @@ The following are all commands needed:
 .. code::
 
     # create environment
-    conda create -n tfpwa2 python=3.7 -y
+    conda create -n tfpwa2 python -y
     conda activate tfpwa2
 
     # install tf-pwa

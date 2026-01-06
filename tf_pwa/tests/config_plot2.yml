@@ -3,6 +3,10 @@ data:
   data: ["toy_data/data.dat"]
   bg: ["toy_data/bg.dat"]
   phsp: ["toy_data/PHSP.dat"]
+  preprocessor:
+    - default
+    - add_dalitz_var:
+        particles: ["B", "C", "D"]
   random_z: False
   r_boost: False
   bg_weight: 0.1
@@ -32,7 +36,11 @@ constrains:
   decay: null
 
 plot:
+  config:
+    yscale: log
   mass:
     R_BC: { display: "$M_{BC}$" }
     R_BD: { display: "$M_{BD}$" }
     R_CD2: { display: "$M_{CD}$" }
+  index:
+    dalitz_var/s12: { display: "s12" }

@@ -89,9 +89,7 @@ class ConfigLoader(BaseConfig):
         self.bound_dic = {}
         self.gauss_constr_dic = {}
         self.init_value = {}
-        self.plot_params = PlotParams(
-            self.config.get("plot", {}), self.decay_struct
-        )
+        self.plot_params = self.create_plot_params()
         self._neglect_when_set_params = []
         self.inv_he = None
         self._Ngroup = 1
@@ -177,8 +175,8 @@ class ConfigLoader(BaseConfig):
         self.save_cached_data(dict(zip(datafile, [data, phsp, bg, inmc])))
         return data, phsp, bg, inmc
 
-    def get_data_index(self, sub, name):
-        return self.plot_params.get_data_index(sub, name)
+    def get_data_index(self, sub, name, *extra):
+        return self.plot_params.get_data_index(sub, name, *extra)
 
     def get_phsp_noeff(self):
         if "phsp_noeff" in self.config["data"]:
@@ -264,8 +262,6 @@ class ConfigLoader(BaseConfig):
             constrains = {}
         self.add_decay_constraints(amp, constrains.get("decay", {}))
         self.add_particle_constraints(amp, constrains.get("particle", {}))
-        self.add_fix_var_constraints(amp, constrains.get("fix_var", {}))
-        self.add_free_var_constraints(amp, constrains.get("free_var", []))
         self.add_var_range_constraints(amp, constrains.get("var_range", {}))
         self.add_var_equal_constraints(amp, constrains.get("var_equal", []))
         self.add_pre_trans_constraints(amp, constrains.get("pre_trans", None))
@@ -275,6 +271,8 @@ class ConfigLoader(BaseConfig):
         self.add_gauss_constr_constraints(
             amp, constrains.get("gauss_constr", {})
         )
+        self.add_fix_var_constraints(amp, constrains.get("fix_var", {}))
+        self.add_free_var_constraints(amp, constrains.get("free_var", []))
         for k, v in self.extra_constrains.items():
             v(amp, constrains.get(k, {}))
 
@@ -366,7 +364,10 @@ class ConfigLoader(BaseConfig):
 
         fix_decay = amp.decay_group.get_decay_chain(fix_total_idx)
         # fix which total factor
-        fix_decay.total.set_fix_idx(fix_idx=0, fix_vals=(fix_total_val, 0.0))
+        if hasattr(fix_decay, "total"):
+            fix_decay.total.set_fix_idx(
+                fix_idx=0, fix_vals=(fix_total_val, 0.0)
+            )
 
         decay_d = dic.get("decay_d", None)
         if decay_d is not None:
@@ -404,8 +405,9 @@ class ConfigLoader(BaseConfig):
             dic = {}
         fix_total_idx = dic.get("fix_chain_idx", 0)
         fix_decay = amp.decay_group.get_decay_chain(fix_total_idx)
-        var = fix_decay.total
-        var.vm.set_fix(var.name + "_0r", unfix=True)
+        if hasattr(fix_decay, "total"):
+            var = fix_decay.total
+            var.vm.set_fix(var.name + "_0r", unfix=True)
 
     def add_particle_constraints(self, amp, dic=None):
         if dic is None:
@@ -539,8 +541,9 @@ class ConfigLoader(BaseConfig):
                         arg_i.sameas(arg)
 
     @functools.lru_cache()
-    def _get_model(self, vm=None, name=""):
-        amp = self.get_amplitude(vm=vm, name=name)
+    def _get_model(self, vm=None, name="", amp=None):
+        if amp is None:
+            amp = self.get_amplitude(vm=vm, name=name)
         model_name = self.config["data"].get("model", "auto")
         w_bkg, w_inmc = self._get_bg_weight()
         model = []
@@ -659,7 +662,9 @@ class ConfigLoader(BaseConfig):
             w_bkg = tmp
         return w_bkg, w_inmc
 
-    def get_fcn(self, all_data=None, batch=65000, vm=None, name=""):
+    def get_fcn(
+        self, all_data=None, batch=65000, vm=None, name="", model=None
+    ):
         if all_data is None:
             if vm in self.cached_fcn:
                 return self.cached_fcn[vm]
@@ -671,8 +676,10 @@ class ConfigLoader(BaseConfig):
             inmc = [None] * self._Ngroup
         if bg is None:
             bg = [None] * self._Ngroup
-        model = self._get_model(vm=vm, name=name)
+        if model is None:
+            model = self._get_model(vm=vm, name=name)
         fcns = []
+        mc_scale = self.config["data"].get("mc_scale", [1.0] * self._Ngroup)
 
         # print(self.config["data"].get("using_mix_likelihood", False))
         if self.config["data"].get("using_mix_likelihood", False):
@@ -682,14 +689,15 @@ class ConfigLoader(BaseConfig):
                 data,
                 phsp,
                 bg=bg,
+                mc_scale=mc_scale,
                 batch=batch,
                 gauss_constr=self.gauss_constr_dic,
             )
             if all_data is None:
                 self.cached_fcn[vm] = fcn
             return fcn
-        for idx, (md, dt, mc, sb, ij) in enumerate(
-            zip(model, data, phsp, bg, inmc)
+        for idx, (md, dt, mc, sb, ij, si) in enumerate(
+            zip(model, data, phsp, bg, inmc, mc_scale)
         ):
             if self.config["data"].get("model", "auto") == "cfit":
                 fcns.append(
@@ -698,6 +706,7 @@ class ConfigLoader(BaseConfig):
                         dt,
                         mc,
                         batch=batch,
+                        mc_scale=si,
                         inmc=ij,
                         gauss_constr=self.gauss_constr_dic,
                     )
@@ -709,6 +718,7 @@ class ConfigLoader(BaseConfig):
                         dt,
                         mc,
                         bg=sb,
+                        mc_scale=si,
                         batch=batch,
                         inmc=ij,
                         gauss_constr=self.gauss_constr_dic,
@@ -807,6 +817,11 @@ class ConfigLoader(BaseConfig):
         vm = self.get_amplitude().vm
         vm.refresh_vars(init_val=self.init_value, bound_dic=self.bound_dic)
 
+    def gen_smear_params(self, cov=None):
+        if cov is None and self.inv_he is not None:
+            cov = self.inv_he
+        return self.vm.smear_vars(cov)
+
     def fitNtimes(self, N, *args, **kwargs):
         for i in range(N):
             self.reinit_params()
@@ -834,8 +849,8 @@ class ConfigLoader(BaseConfig):
             params = {}
         if correct_params is None:
             correct_params = []
-            if method is None:
-                method = "correct"
+        if len(correct_params) > 0 and method is None:
+            method = "correct"
         if hasattr(params, "params"):
             params = getattr(params, "params")
         if not using_cached:
@@ -1038,10 +1053,10 @@ class ConfigLoader(BaseConfig):
             neglect_params = self._neglect_when_set_params
         if len(neglect_params) != 0:
             for v in params:
-                if v in self._neglect_when_set_params:
+                if v in neglect_params:
                     warnings.warn(
                         "Neglect {} when setting params.".format(
-                            neglect_params
+                            [i for i in params if i in neglect_params]
                         )
                     )
                     del ret[v]
@@ -1079,8 +1094,8 @@ class ConfigLoader(BaseConfig):
         can be treated as a implect function :math:`a(b)`. The gradients is
 
         .. math::
-            \\frac{\\partial a }{\\partial b} = - (\\frac{\\partial^2 \ln L(a,b)}{\\partial a \\partial a })^{-1}
-            \\frac{\\partial \ln L(a,b)}{\\partial a\\partial b }.
+            \\frac{\\partial a }{\\partial b} = - (\\frac{\\partial^2 \\ln L(a,b)}{\\partial a \\partial a })^{-1}
+            \\frac{\\partial \\ln L(a,b)}{\\partial a\\partial b }.
 
         The uncertanties from b with error matrix :math:`V_b` can propagate to a as
 
@@ -1147,6 +1162,10 @@ class ConfigLoader(BaseConfig):
         tf.saved_model.save(
             module, dir_name, signatures={"serving_default": call}
         )
+
+    def create_plot_params(self):
+        ret = PlotParams(self.config.get("plot", None), self.decay_struct)
+        return ret
 
 
 def set_prefix_constrains(vm, base, params_dic, self):
@@ -1231,10 +1250,10 @@ def validate_file_name(s):
 
 class PlotParams(dict):
     def __init__(self, plot_config, decay_struct):
-        self.config = plot_config
+        self.decay_struct = decay_struct
+        self.config = self.add_predined_vars(plot_config)
         self.defaults_config = {}
         self.defaults_config.update(self.config.get("config", {}))
-        self.decay_struct = decay_struct
         chain_map = self.decay_struct.get_chains_map()
         self.re_map = {}
         for i in chain_map:
@@ -1253,15 +1272,63 @@ class PlotParams(dict):
         for i in self.get_extra_vars():
             self.params.append(i)
 
-    def get_data_index(self, sub, name):
+    def add_predined_vars(self, plot_config):
+        if plot_config is None:
+            plot_config = {"predefined": ["mass", "angle"]}
+        plot_config = plot_config.copy()
+        predefined_config = {
+            "mass": self.create_mass_config,
+            "angle": self.create_angle_config,
+        }
+
+        for i in plot_config.get("predefined", []):
+            if i in predefined_config:
+                plot_config[i] = plot_config.get(i, {})
+                tmp = predefined_config[i]()
+                for k, v in tmp.items():
+                    if k not in plot_config:
+                        plot_config[i][k] = v
+            else:
+                warnings.warn("not found such predefined plot config")
+        return plot_config
+
+    def create_mass_config(self):
+        ret = {}
+        for i in self.decay_struct.resonances:
+            chain = self.decay_struct.get_decay_chain(i)
+            finals = chain.sorted_table()[i]
+            name = "".join([getattr(j, "display", str(j)) for j in finals])
+            ret[str(i)] = {"display": "M(" + name + ")"}
+        return ret
+
+    def create_angle_config(self):
+        ret = {}
+        for idx1, chain in enumerate(self.decay_struct):
+            for idx2, decay in enumerate(chain):
+                part = decay.outs[0]
+                prefix = [str(i) for i in chain.inner if i != part]
+                prefix.append(str(part))
+                name = "/".join(prefix)
+                display_sub = getattr(part, "display", str(part))
+                if display_sub[0] == "$" and display_sub[-1] == "$":
+                    display_sub = display_sub[1:-1]
+                display_phi = f"$\\phi_{{{display_sub}}}^{{{idx1}}}$"
+                display_theta = f"$\\cos\\theta_{{{display_sub}}}^{{{idx1}}}$"
+                ret[name] = {
+                    "alpha": {"display": display_phi},
+                    "cos(beta)": {"display": display_theta},
+                }
+        return ret
+
+    def get_data_index(self, sub, name, *extra):
         dec = self.decay_struct.topology_structure()
         if sub == "mass":
             p = get_particle(name)
-            return "particle", self.re_map.get(p, p), "m"
-        if sub == "p":
+            ret = "particle", self.re_map.get(p, p), "m"
+        elif sub == "p":
             p = get_particle(name)
-            return "particle", self.re_map.get(p, p), "p"
-        if sub == "angle":
+            ret = "particle", self.re_map.get(p, p), "p"
+        elif sub == "angle":
             name_i = name.split("/")
             de_i = self.decay_struct.get_decay_chain(name_i)
             p = get_particle(name_i[-1])
@@ -1271,14 +1338,14 @@ class PlotParams(dict):
                     break
             else:
                 raise IndexError("not found such decay {}".format(name))
-            return (
+            ret = (
                 "decay",
                 de_i.standard_topology(),
                 self.re_map.get(de, de),
                 self.re_map.get(p, p),
                 "ang",
             )
-        if sub == "aligned_angle":
+        elif sub == "aligned_angle":
             name_i = name.split("/")
             de_i = self.decay_struct.get_decay_chain(name_i)
             p = get_particle(name_i[-1])
@@ -1288,17 +1355,19 @@ class PlotParams(dict):
                     break
             else:
                 raise IndexError("not found such decay {}".format(name))
-            return (
+            ret = (
                 "decay",
                 de_i.standard_topology(),
                 self.re_map.get(de, de),
                 self.re_map.get(p, p),
                 "aligned_angle",
             )
-        if sub == "index":
+        elif sub == "index":
             name_i = name.split("/")
-            return name_i
-        raise ValueError("unknown sub {}".format(sub))
+            ret = name_i
+        else:
+            raise ValueError("unknown sub {}".format(sub))
+        return tuple(list(ret) + list(extra))
 
     def read_plot_config(self, v):
         upper_ylim = v.get("upper_ylim", None)

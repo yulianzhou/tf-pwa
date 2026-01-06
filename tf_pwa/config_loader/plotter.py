@@ -82,7 +82,7 @@ class Frame:
         name=None,
         display=None,
         trans=None,
-        **extra
+        **extra,
     ):
         self.var = var
         self.x_range = x_range

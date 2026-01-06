@@ -24,6 +24,7 @@ from tf_pwa.tensorflow_wrapper import tf
 from .core import (
     AmpBase,
     AmpDecay,
+    DecayChain,
     HelicityDecay,
     Particle,
     _ad_hoc,
@@ -31,6 +32,7 @@ from .core import (
     get_relative_p2,
     regist_decay,
     regist_particle,
+    register_decay_chain,
 )
 
 
@@ -658,11 +660,7 @@ class HelicityDecayNPbf(HelicityDecayNP):
     def get_H_barrier_factor(self, data, data_p, **kwargs):
         q0 = self.get_relative_momentum(data_p, False)
         data["|q0|"] = q0
-        if "|q|" in data:
-            q = data["|q|"]
-        else:
-            q = self.get_relative_momentum(data_p, True)
-            data["|q|"] = q
+        q = self.cache_relative_p(data, data_p)
         bf = barrier_factor([min(self.get_l_list())], q, q0, self.d)
         return bf
 
@@ -711,10 +709,12 @@ class HelicityDecayP(HelicityDecayNP):
             self.part_H = 1
         self.fix_unused_h()
 
-    def get_helicity_amp(self, data, data_p, **kwargs):
+    def get_helicity_amp(self, data=None, data_p=None, **kwargs):
         n_b = len(self.outs[0].spins)
         n_c = len(self.outs[1].spins)
         H_part = self.get_H()
+        if n_b == 1 and n_c == 1:
+            return H_part
         if self.part_H == 0:
             H = tf.concat(
                 [
@@ -769,11 +769,7 @@ class HelicityDecayCPV(HelicityDecay):
         # print(g_ls)
         q0 = self.get_relative_momentum2(data_p, False)
         data["|q0|2"] = q0
-        if "|q|2" in data:
-            q = data["|q|2"]
-        else:
-            q = self.get_relative_momentum2(data_p, True)
-            data["|q|2"] = q
+        q = self.cache_relative_p2(data, data_p)
         if self.has_barrier_factor:
             bf = self.get_barrier_factor2(
                 data_p[self.core]["m"], q, q0, self.d
@@ -850,3 +846,26 @@ class HelicityDecayReduceH0(HelicityDecay):
         if self.ls_index is None:
             return tf.stack(gls)
         return tf.stack([gls[k] for k in self.ls_index])
+
+
+@register_decay_chain("ref_amp")
+class RefAmpDecayChain(DecayChain):
+    def __init__(self, *args, varname="ref_amp", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.varname = varname
+        for i in self:
+            i.ls_list = (i.get_ls_list()[0],)
+
+    def get_amp(self, *args, **kwargs):
+        a = self.get_amp_total()
+        f = kwargs["all_data"][self.varname]
+        return a * f
+
+    def get_angle_amp(self, *args, **kwargs):
+        return kwargs["all_data"][self.varname]
+
+    def get_m_dep(self, *args, **kwargs):
+        return [self.get_amp_total()]
+
+    def get_factor_angle_amp(self, *args, **kwargs):
+        return kwargs["all_data"][self.varname]

@@ -2,9 +2,71 @@
 
 ## [Unreleased](https://github.com/jiangyi15/tf-pwa/tree/HEAD)
 
-[Full Changelog](https://github.com/jiangyi15/tf-pwa/compare/v0.2.1...HEAD)
+[Full Changelog](https://github.com/jiangyi15/tf-pwa/compare/v0.2.2...HEAD)
+
+## [v0.2.2](https://github.com/jiangyi15/tf-pwa/tree/v0.2.2) (2024-11-13)
+
+[Full Changelog](https://github.com/jiangyi15/tf-pwa/compare/v0.2.1...v0.2.2)
+
+**comparation of different way for identical particles**
+
+[#148](https://github.com/jiangyi15/tf-pwa/pull/148)
+
+**Added**
+
+- `default_params` to set value for paramters for particle model .
+  [#155](https://github.com/jiangyi15/tf-pwa/pull/155)
+
+- `add_int_err` option for fit fraction sample size uncertainties.
+  [#155](https://github.com/jiangyi15/tf-pwa/pull/155)
+
+- phase space volume: [#143](https://github.com/jiangyi15/tf-pwa/pull/143)
+
+- pole_function: [#144](https://github.com/jiangyi15/tf-pwa/pull/144)
+
+- combine_asym_error: [#144](https://github.com/jiangyi15/tf-pwa/pull/144)
+
+- New models.
+
+  - Kmatrix model from AmpGen: `pipi_Swave`, `Kpi_Swave`.
+    [#142](https://github.com/jiangyi15/tf-pwa/pull/142)
+
+  - Specail decay model for decaying to gamma: `gls_reduce_h0`.
+    [#144](https://github.com/jiangyi15/tf-pwa/pull/144)
+
+  - Polynomial model: `poly`.
+    [#144](https://github.com/jiangyi15/tf-pwa/pull/144)
+
+  - MLP model : `MLP`. [#147](https://github.com/jiangyi15/tf-pwa/pull/147)
+
+  - dispersion integral models: `DI`, `DI_a0`:
+    [#150](https://github.com/jiangyi15/tf-pwa/pull/150)
+
+- Update on plots:
+
+  - histogram with fill style:
+    [#140](https://github.com/jiangyi15/tf-pwa/pull/140)
+
+  - plot for `index`, `extra_vars`:
+    [#145](https://github.com/jiangyi15/tf-pwa/pull/145)
+
+**Changed**
+
+- fit with no parameters: [#155](https://github.com/jiangyi15/tf-pwa/pull/155)
+
+- Fix some bugs: [#141](https://github.com/jiangyi15/tf-pwa/pull/141)
+  [#153](https://github.com/jiangyi15/tf-pwa/pull/158)
+
+- update documents: [#144](https://github.com/jiangyi15/tf-pwa/pull/144)
+  [#146](https://github.com/jiangyi15/tf-pwa/pull/146)
+  [#148](https://github.com/jiangyi15/tf-pwa/pull/148)
+  [#149](https://github.com/jiangyi15/tf-pwa/pull/149)
+  [#151](https://github.com/jiangyi15/tf-pwa/pull/151)
+  [#155](https://github.com/jiangyi15/tf-pwa/pull/155)
 
 ## [v0.2.1](https://github.com/jiangyi15/tf-pwa/tree/v0.2.1) (2024-02-10)
+
+[Full Changelog](https://github.com/jiangyi15/tf-pwa/compare/v0.2.0...v0.2.1)
 
 **Irreducible Tensor Formula**
 

@@ -52,7 +52,7 @@ class Vector3(tf.Tensor):
         """
         The unit vector of itself. It has interface to *tf.linalg.normalize()*.
         """
-        p, _n = tf.linalg.normalize(self, axis=-1)
+        p = tf.math.l2_normalize(self, axis=-1)
         return p
 
     def cross_unit(self, other):
@@ -449,3 +449,40 @@ def kine_max(s12, m0, m1, m2, m3):
     """max s23 for s12 in p0 -> p1 p2 p3"""
     s_min, s_max = kine_min_max(s12, m0, m1, m2, m3)
     return s_max
+
+
+def hel12_s23(m12, costheta, m0, m1, m2, m3):
+    """convert helicity angle (m12, costheta) to Dalitz plot variable (s12, s23)
+
+    >>> hel12_s23(1.5, 0.8, 3.0, 0.5, 0.5, 0.5)
+    ...
+    <tf.Tensor: shape=(), dtype=..., numpy=1.864...>
+
+    """
+    delta_m21 = m2**2 - m1**2
+    delta_m03 = m0**2 - m3**2
+    s12 = m12**2
+    E2 = (s12 + delta_m21) / 2 / m12
+    E3 = (delta_m03 - s12) / 2 / m12
+    p2 = tf.sqrt(E2**2 - m2**2)
+    p3 = tf.sqrt(E3**2 - m3**2)
+    s23 = m2**2 + m3**2 + 2 * E2 * E3 - 2 * p2 * p3 * costheta
+    return s23
+
+
+def s23_hel12(s12, s23, m0, m1, m2, m3):
+    """convert Dalitz plot variable (s12, s23) to helicity angle (m12, costheta)
+
+    >>> s23_hel12(1.5**2, 1.5**2, 3.0, 0.5, 0.5, 0.5)
+    ...
+    <tf.Tensor: shape=(), dtype=..., numpy=-0.636...>
+    """
+    delta_m21 = m2**2 - m1**2
+    delta_m03 = m0**2 - m3**2
+    m12 = tf.sqrt(s12)
+    E2 = (s12 + delta_m21) / 2 / m12
+    E3 = (delta_m03 - s12) / 2 / m12
+    p2 = tf.sqrt(E2**2 - m2**2)
+    p3 = tf.sqrt(E3**2 - m3**2)
+    costheta = (s23 - m2**2 - m3**2 - 2 * E2 * E3) / (2 * p2 * p3)
+    return costheta

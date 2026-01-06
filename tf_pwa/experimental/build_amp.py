@@ -51,6 +51,8 @@ def build_params_vector(dg, data):
     for i in m_dep:
         tmp = i[0]
         if tmp.shape[0] == 1:
+            if n_data is None:
+                n_data = 1
             tmp = tf.tile(tmp, [n_data] + [1] * (len(tmp.shape) - 1))
         tmp = tf.reshape(tmp, (-1, _prod(tmp.shape[1:])))
         for j in i[1:]:

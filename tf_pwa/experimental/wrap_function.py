@@ -1,6 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
+from tf_pwa.config import get_config
+
 
 def _wrap_struct(dic, first_none=True):
     if isinstance(dic, dict):
@@ -80,7 +82,11 @@ class WrapFun:
                 *list(_flatten(self.struct[idx]))
             )
         new_x = [
-            tf.convert_to_tensor(i) if not isinstance(i, tf.Tensor) else i
+            (
+                tf.convert_to_tensor(i, get_config("dtype"))
+                if not isinstance(i, tf.Tensor)
+                else i
+            )
             for i in new_x
         ]
         return self.cached_f[idx](

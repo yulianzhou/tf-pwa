@@ -3,13 +3,13 @@
 __pycache__
 .ipynb_checkpoints
 *.pyc
+*.diff
 
 tf_pwa/version.py
 
 *.npy
 *.json
 *.log
-*.yml
 *.png
 *.pdf
 *.pptx

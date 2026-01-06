@@ -9,7 +9,6 @@
 <br>
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/jiangyi15/tf-pwa/HEAD)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)](https://github.com/pre-commit/pre-commit)
-[![Prettier](https://camo.githubusercontent.com/687a8ae8d15f9409617d2cc5a30292a884f6813a/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f636f64655f7374796c652d70726574746965722d6666363962342e7376673f7374796c653d666c61742d737175617265)](https://prettier.io/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://pycqa.github.io/isort/)
 
@@ -36,17 +35,19 @@ When using conda, you don't need to install CUDA for TensorFlow specially.
 1. Get miniconda for python3 from
    [miniconda3](https://docs.conda.io/en/latest/miniconda.html) and install it.
 
-2. Install requirements, we recommed Ampere card users to install with
+2. Install requirements, some users with Ampere card can install with
    `tensorflow_2_6_requirements.txt` (see this
    [technical FAQ](https://tf-pwa.readthedocs.io/en/latest/tensorflow_version.html)).
 
 You can install a tensorflow gpu version in anaconda as
 
 ```
-conda install tensorflow[build="gpu*"]=2.8
+conda install tensorflow
 ```
 
-and then install the rest dependences
+You can choose the version of tensorflow by adding some wildcard character such as `tensorflow[build=gpu*]=2.12`. Build tag with gpu or cuda (such as `gpu_py311h65739b5_0`) include  GPU support. You can see all version with `conda search tensorflow`.
+
+And then install the rest dependences
 
 ```
 conda install --file requirements-min.txt
@@ -92,8 +93,10 @@ conda install tf-pwa
 <details><summary>
 ###  pip
 </summary><p>
-When using `pip`, you will need to install CUDA to use GPU. Just run the
-following command :
+
+When using `pip`, you will need to install CUDA to use GPU (The newest
+tensorflow support install with CUDA runtime directly as
+`pip install tensorflow[and-cuda]`). Just run the following command :
 
 ```bash
 python3 -m pip install -e .
@@ -104,6 +107,18 @@ with:
 
 ```bash
 python3 -m pip install -e .[dev]
+```
+
+You can also install from pypi.org directly without cloning the repo manually.
+
+```bash
+python3 -m pip install TFPWA
+```
+
+And also for the newest version from github
+
+```bash
+python3 -m pip install git+https://github.com/jiangyi15/tf-pwa.git
 ```
 
 </p></details>

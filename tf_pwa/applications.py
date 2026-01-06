@@ -50,17 +50,24 @@ def fit_fractions(
     :param mcdata: MCdata array.
     :param inv_he: The inverse of Hessian matrix. If it's not given, the errors will not be calculated.
     :return frac: Dictionary of fit fractions for each resonance.
-    :return err_frac: Dictionary of their errors. If ``inv_he`` is ``None``, it will be a dictionary of ``None``.
+    :return err_frac: Dictionary of their errors. If ``inv_he`` is ``None``, it will be a dictionary of ``{}``.
     """
     if params is None:
         params = {}
     err_frac = {}
     if method == "old":
-        with amp.temp_params(params):
-            frac, grad = cal_fitfractions(amp, mcdata, res=res, batch=batch)
         if inv_he is not None:
+            with amp.temp_params(params):
+                frac, grad = cal_fitfractions(
+                    amp, mcdata, res=res, batch=batch
+                )
             for i in frac:
                 err_frac[i] = np.sqrt(np.dot(np.dot(inv_he, grad[i]), grad[i]))
+        else:
+            with amp.temp_params(params):
+                frac = cal_fitfractions_no_grad(
+                    amp, mcdata, res=res, batch=batch
+                )
         return frac, err_frac
     else:
         ret = FitFractions(amp, res)
@@ -238,7 +245,7 @@ def force_pos_def_minuit2(inv_he):
     """
     force positive defined of error matrix
 
-        from minuit2 https://github.com/root-project/root/blob/master/math/minuit2/sec/MnPosDef.cxx
+        from minuit2 https://github.com/root-project/root/blob/master/math/minuit2/src/MnPosDef.cxx
     """
     inv_he = np.array(inv_he)
     finfo = np.info(inv_he.dtype)
@@ -257,7 +264,7 @@ def force_pos_def_minuit2(inv_he):
     epspdf = max(1e-6, eps2)
     dg = 0.5 + epspdf - dgmin
     inv_he += np.diag(diag_i * dg)
-    warnings.warn("Added to diagonal of Error Matrix a value {}".format(dgmin))
+    warnings.warn("Added to diagonal of Error Matrix a value {}".format(dg))
     diag2 = np.diagonal(inv_he)
     diag2 = np.where(diag2 < 0, 1, diag2)
     e = 1 / np.sqrt(diag2)
@@ -319,6 +326,8 @@ def cal_hesse_error(
     :return hesse_error: List of errors.
     :return inv_he: The inverse Hessian matrix.
     """
+    if len(fcn.vm.trainable_vars) == 0:
+        return {}, None
     t = time.time()
     nll, g, h = fcn.nll_grad_hessian(
         params

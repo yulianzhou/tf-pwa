@@ -15,8 +15,11 @@ resonances = {
     "R1": {"J": 0, "P": 1, "mass": 1.0, "width": 0.07},
     "R2": {"J": 1, "P": -1, "mass": 1.225, "width": 0.08},
 }
-
-a, b, c, d = [get_particle(i, J=0, P=-1) for i in "ABCD"]
+m_A, m_B, m_C, m_D = 1.8, 0.18, 0.18, 0.18
+a, b, c, d = [
+    get_particle(i, J=0, P=-1, mass=m)
+    for i, m in zip("ABCD", [m_A, m_B, m_C, m_D])
+]
 r1, r2, r3 = [get_particle(i, **resonances[i]) for i in resonances.keys()]
 
 

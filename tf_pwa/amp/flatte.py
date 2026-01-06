@@ -253,7 +253,7 @@ The plot use parameters :math:`m_0=0.7, m_{0,1}=m_{0,2}=0.1, m_{1,1}=m_{1,2}=0.3
         no_m0=False,
         no_q0=False,
         cut_phsp=False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, im_sign=im_sign, **kwargs)
         if l_list is None:

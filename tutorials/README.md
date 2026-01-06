@@ -47,3 +47,8 @@ A \rightarrow R_{CD} B, R_{CD} \rightarrow C D.
 5. [cal_fitfracs.py](cal_fitfracs.py)
 
    Using `python cal_fitfracs.py`, we can get the fit fractions of the fit.
+
+6. [save_amp.py](save_amp.py)
+
+   Using `python save_amp.py --input_file phsp --save_file amp.dat`, we can
+   save amplitude square value to files.

@@ -431,6 +431,9 @@ def data_generator(data, fun=_data_split, args=(), kwargs=None, MAX_ITER=1000):
                 vs.append(_gen(v))
             for s_data in zip(*vs):
                 yield s_data
+        elif isinstance(dat, (float, int, bool, complex)):
+            for i in range(MAX_ITER):
+                yield dat
         else:
             for i in fun(dat, *args, **kwargs):
                 yield i
@@ -544,6 +547,10 @@ def data_merge(*data, axis=0):
         return tuple([data_merge(*data_i) for data_i in zip(*data)])
     m_data = tf.concat(data, axis=axis)
     return m_data
+
+
+def data_repeat(data, repeats=2):
+    return data_map(data, tf.repeat, (repeats,), {"axis": 0})
 
 
 def data_shape(data, axis=0, all_list=False):

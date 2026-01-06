@@ -60,6 +60,14 @@ plot:
     dalitz_12:
       x: m_R_BC**2
       y: m_R_BD**2
+    dalitz_12_2:
+      x: m_R_BC**2
+      y: m_R_BD**2
+      add_dalitz_boundary: [R_BC, R_BD]
+    dalitz_12_3:
+      x: m_R_BC**2
+      y: m_R_BD**2
+      add_dalitz_boundary: [4.6, 2.01028, 2.00698, 0.13957]
     mass_angle:
       x: m1
       y: costheta

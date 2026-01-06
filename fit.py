@@ -55,7 +55,7 @@ def print_fit_result_roofit(config, fit_result):
     value = fit_result.params
     params_name = config.vm.trainable_vars
     n_par = len(params_name)
-    name_size = max(len(i) for i in params_name)
+    name_size = max([5] + [len(i) for i in params_name])
     # fcn = config.get_fcn()
     # _, grad = fcn.nll_grad(fit_result.params)
     # edm = np.dot(np.dot(config.inv_he, grad), grad)
@@ -174,17 +174,29 @@ def fit(
     return fit_result
 
 
-def write_some_results(config, fit_result, save_root=False, cpu_plot=False):
+def write_some_results(
+    config,
+    fit_result,
+    save_root=False,
+    cpu_plot=False,
+    plot_figure=True,
+    add_chi2=False,
+):
     # plot partial wave distribution
-    if cpu_plot:
+    if plot_figure and cpu_plot:
         with tf.device("CPU"):
             config.plot_partial_wave(
-                fit_result, plot_pull=True, save_root=save_root
+                fit_result,
+                plot_pull=True,
+                save_root=save_root,
+                add_chi2=add_chi2,
             )
-    else:
+    elif plot_figure:
         config.plot_partial_wave(
-            fit_result, plot_pull=True, save_root=save_root
+            fit_result, plot_pull=True, save_root=save_root, add_chi2=add_chi2
         )
+    else:
+        print("No plot.")
 
     # calculate fit fractions
     phsp_noeff = config.get_phsp_noeff()
@@ -209,23 +221,35 @@ def write_some_results(config, fit_result, save_root=False, cpu_plot=False):
 
 
 def write_some_results_combine(
-    config, fit_result, save_root=False, cpu_plot=False
+    config,
+    fit_result,
+    save_root=False,
+    cpu_plot=False,
+    plot_figure=True,
+    add_chi2=False,
 ):
 
     from tf_pwa.applications import fit_fractions
 
-    for i, c in enumerate(config.configs):
-        if cpu_plot:
-            with tf.device("CPU"):
+    if plot_figure:
+        for i, c in enumerate(config.configs):
+            if cpu_plot:
+                with tf.device("CPU"):
+                    c.plot_partial_wave(
+                        fit_result,
+                        prefix="figure/s{}_".format(i),
+                        save_root=save_root,
+                        add_chi2=add_chi2,
+                    )
+            else:
                 c.plot_partial_wave(
                     fit_result,
                     prefix="figure/s{}_".format(i),
                     save_root=save_root,
+                    add_chi2=add_chi2,
                 )
-        else:
-            c.plot_partial_wave(
-                fit_result, prefix="figure/s{}_".format(i), save_root=save_root
-            )
+    else:
+        print("No plot.")
 
     for it, config_i in enumerate(config.configs):
         print("########## fit fractions {}:".format(it))
@@ -280,6 +304,12 @@ def main():
         "--CPU-plot", action="store_true", default=False, dest="cpu_plot"
     )
     parser.add_argument(
+        "--no-plot", action="store_false", default=True, dest="plot_figure"
+    )
+    parser.add_argument(
+        "--add-chi2", action="store_true", default=False, dest="add_chi2"
+    )
+    parser.add_argument(
         "-c",
         "--config",
         default="config.yml",
@@ -320,6 +350,8 @@ def main():
                 fit_result,
                 save_root=results.save_root,
                 cpu_plot=results.cpu_plot,
+                plot_figure=results.plot_figure,
+                add_chi2=results.add_chi2,
             )
         else:
             write_some_results_combine(
@@ -327,6 +359,8 @@ def main():
                 fit_result,
                 save_root=results.save_root,
                 cpu_plot=results.cpu_plot,
+                plot_figure=results.plot_figure,
+                add_chi2=results.add_chi2,
             )
 
 

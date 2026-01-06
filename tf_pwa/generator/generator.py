@@ -89,7 +89,9 @@ def multi_sampling(
             max_weight = new_max_weight * 1.1
         if new_max_weight > max_weight and len(all_data) > 0:
             tmp = data_merge(*all_data)
-            rnd = tf.random.uniform((data_shape(tmp),), dtype=max_weight.dtype)
+            rnd = tf.random.uniform(
+                (data_shape(tmp),), dtype=new_max_weight.dtype
+            )
             cut = (
                 rnd * new_max_weight / max_weight < 1.0
             )  # .max_amplitude < 1.0
@@ -146,3 +148,21 @@ class ARGenerator(BaseGenerator):
         )
         self.status = status
         return ret
+
+
+class MergeGenerator(BaseGenerator):
+    def __init__(self, gens):
+        self.gens = gens
+
+    def generate(self, N):
+        if len(self.gens) == 0:
+            return {}
+        ret = self.gens[0].generate(N)
+        for i in self.gens[1:]:
+            tmp = i.generate(N)
+            for k, v in tmp.items():
+                ret[k] = v
+        return ret
+
+    def cal_max_weight(self, *args, **kwargs):
+        return self.gens[0].cal_max_weight(*args, **kwargs)

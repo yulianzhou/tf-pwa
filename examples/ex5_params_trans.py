@@ -2,7 +2,7 @@
 Examples for error propagation
 ------------------------------
 
-Hear we use the same config in `particle_amplitude.py`
+Here we use the same config in `ex3_particle_config.py`
 
 """
 
@@ -69,7 +69,7 @@ import tensorflow as tf
 
 with config.params_trans() as pt:
     a2_r = pt["A->R2.CR2->B.D_total_0r"]
-    a2_i = pt["A->R2.CR2->B.D_total_0r"]
+    a2_i = pt["A->R2.CR2->B.D_total_0i"]
     a2_x = a2_r * tf.cos(a2_i)
 
 # %%
@@ -78,23 +78,50 @@ with config.params_trans() as pt:
 print(a2_x.numpy(), pt.get_error(a2_x).numpy())
 
 # %%
-# We can also calculate some more complex examples, such as the ratio in mass range (0.75, 0.85) over full phace space.
+# Uncertainties of fit fractions
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# We can also calculate some more complex examples, such as the fit fractions of all in `C+D`.
 # Even further, we can get the error of error in the meaning of error propagation.
-
-from tf_pwa.data import data_mask
-
-m_R2 = phsp.get_mass("(B, D)")
-cut_cond = (m_R2 < 0.85) & (m_R2 > 0.75)
 
 amp = config.get_amplitude()
 
-with config.params_trans() as pt1:
-    with config.params_trans() as pt:
-        int_mc = tf.reduce_sum(amp(phsp))
-        cut_phsp = data_mask(phsp, cut_cond)
-        cut_int_mc = tf.reduce_sum(amp(cut_phsp))
-        ratio = cut_int_mc / int_mc
-    error = pt.get_error(ratio)
+with config.params_trans() as pt:
+    int_mc = tf.reduce_sum(amp(phsp))
+    with amp.temp_used_res(["R1_a", "R1_b"]):
+        part_int_mc = tf.reduce_sum(amp(phsp))
+    ratio = part_int_mc / int_mc
+error = pt.get_error(ratio)
 
 print(ratio.numpy(), "+/-", error.numpy())
-print(error.numpy(), "+/-", pt1.get_error(error).numpy())
+
+# %%
+# For large data size it would be some problem named OOM (out of memory).
+# TFPWA provide `vm.batch_sum_var` to do sum of large samples
+
+int_mc_v = config.vm.batch_sum_var(amp, phsp, batch=5000)
+
+with amp.temp_used_res(["R1_a", "R1_b"]):
+    part_int_mc_v = config.vm.batch_sum_var(amp, phsp, batch=5000)
+
+# %%
+# It will store the pre-calculated gradients as
+
+print(int_mc_v.grad, part_int_mc_v.grad)
+
+# %%
+# Then, we can use it as a function to do error propagation:
+
+with config.params_trans() as pt:
+    ratio = part_int_mc_v() / int_mc_v()
+error = pt.get_error(ratio)
+
+print(ratio.numpy(), "+/-", error.numpy())
+
+# %%
+# Besides the error propagation, there would be some additional uncertainties.
+# For example, the uncertainty from the integration sample size is often defined as the sum of square as
+
+with amp.temp_used_res(["R1_a", "R1_b"]):
+    int_square = tf.reduce_sum((amp(phsp) / int_mc) ** 2)
+
+print(ratio.numpy(), "+/-", error.numpy(), "+/-", tf.sqrt(int_square).numpy())

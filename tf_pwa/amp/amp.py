@@ -24,6 +24,7 @@ def register_amp_model(name=None, f=None):
             my_name = g.__name__
         else:
             my_name = name
+        g.model_name = name
         config = get_config(AMP_MODEL)
         if my_name in config:
             warnings.warn("Override mode {}".format(my_name))
@@ -37,6 +38,21 @@ def register_amp_model(name=None, f=None):
 
 def create_amplitude(decay_group, **kwargs):
     mode = kwargs.get("model", "default")
+    if isinstance(mode, dict):
+        if len(mode.keys()) == 1:
+            key = list(mode.keys())[0]
+            kwargs.update(mode[key])
+            if "model" in mode[key]:
+                mode = mode[key]["model"]
+            else:
+                mode = key
+        else:
+            ret = {}
+            for k, v in mode.items():
+                kwargs["model"] = {k: v}
+                ret[k] = create_amplitude(decay_group, **kwargs)
+            del kwargs["model"]
+            return ProdPDF(decay_group, pdfs=ret, **kwargs)
     return get_config(AMP_MODEL)[mode](decay_group, **kwargs)
 
 
@@ -50,7 +66,7 @@ class AbsPDF:
         use_tf_function=False,
         no_id_cached=False,
         jit_compile=False,
-        **kwargs
+        **kwargs,
     ):
         self.name = name
         with variable_scope(vm) as vm:
@@ -101,7 +117,7 @@ class AbsPDF:
     def __call__(self, data, cached=False):
         if isinstance(data, LazyCall):
             data = data.eval()
-        if id(data) in self.f_data or self.no_id_cached:
+        if id(data) in self.f_data and not self.no_id_cached:
             if self.cached_available():  # decay_group.not_full:
                 return self.cached_fun(data)
         else:
@@ -143,8 +159,8 @@ class BaseAmplitudeModel(AbsPDF):
         self.decay_group.set_used_res(res)
 
     @contextlib.contextmanager
-    def temp_used_res(self, res):
-        with self.decay_group.temp_used_res(res):
+    def temp_used_res(self, res, only=False):
+        with self.decay_group.temp_used_res(res, only=only):
             yield
 
     def set_used_chains(self, used_chains):
@@ -350,6 +366,16 @@ class FactorAmplitudeModel(BaseAmplitudeModel):
 
 @register_amp_model("p4_directly")
 class P4DirectlyAmplitudeModel(BaseAmplitudeModel):
+    def __init__(self, *args, base_model="default", **kwargs):
+        new_kwargs = kwargs.copy()
+        new_kwargs["model"] = base_model
+        self.ref_amp = create_amplitude(*args, **new_kwargs)
+        super().__init__(*args, **kwargs)
+
+    def init_params(self, *args, **kwargs):
+        super().init_params(*args, **kwargs)
+        self.ref_amp.init_params(*args, **kwargs)
+
     def cal_angle(self, p4):
         from tf_pwa.cal_angle import cal_angle_from_momentum
 
@@ -370,4 +396,81 @@ class P4DirectlyAmplitudeModel(BaseAmplitudeModel):
 
     def pdf(self, data):
         new_data = self.cal_angle(data["p4"])
-        return self.decay_group.sum_amp({**new_data, **data})
+        return self.ref_amp({**new_data, **data})
+
+
+@register_amp_model("simple_mlp")
+class MLPModel(BaseAmplitudeModel):
+    def __init__(
+        self, *args, n_hidden=10, n_layers=2, activation="softplus", **kwargs
+    ):
+        if isinstance(n_hidden, int):
+            self.n_hidden = [n_hidden] * (n_layers - 1)
+        else:
+            self.n_hidden = n_hidden
+        self.n_layers = len(self.n_hidden) + 1
+        self.activation = getattr(tf.nn, activation)
+        super().__init__(*args, **kwargs)
+
+    def init_params(self, name=""):
+        self.decay_chain = self.decay_group[0]
+        from tf_pwa.data_trans.helicity_angle import HelicityAngle
+
+        self.ha = HelicityAngle(self.decay_chain)
+        self.top = self.decay_group.top
+        n_decay = len(self.decay_chain)
+        n_finals = n_decay + 1
+        self.Ws = []
+        self.Bs = []
+        for i in range(self.n_layers):
+            if i == 0:
+                n_input = n_decay * 3
+            else:
+                n_input = self.n_hidden[i - 1]
+            if i == self.n_layers - 1:
+                n_output = 1
+            else:
+                n_output = self.n_hidden[i]
+            self.Ws.append(
+                self.top.add_var(f"W{i}", shape=(n_input, n_output))
+            )
+            self.Bs.append(self.top.add_var(f"b{i}", shape=(n_output,)))
+
+    def pdf(self, data):
+        mass, costheta, phi = self.ha.find_variable(data)
+        m = [mass[i.core] for i in self.decay_chain]
+        x = tf.stack(tf.nest.flatten([m, costheta, phi]), axis=-1)
+        for i in range(self.n_layers):
+            w = self.Ws[i]()
+            x = tf.matmul(x, w) + self.Bs[i]()
+            x = self.activation(x)
+        return x[..., 0]
+
+
+class ProdPDF(BaseAmplitudeModel):
+    def __init__(self, *args, pdfs, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pdfs = pdfs
+
+    def partial_weight(self, data, combine=None):
+        pw = [
+            f.partial_weight(data, combine=combine)
+            for k, f in self.pdfs.items()
+        ]
+        sum_pw = []
+        for i in range(len(pw[0])):
+            tmp = []
+            for j in range(len(pw)):
+                tmp.append(pw[j][i])
+            sum_pw.append(tf.reduce_prod(tmp, axis=0))
+        return sum_pw
+
+    def pdf(self, data):
+        y = [f.pdf(data) for k, f in self.pdfs.items()]
+        return tf.reduce_prod(y, axis=0)
+
+
+@register_amp_model("constant")
+class ConstantPDF(BaseAmplitudeModel):
+    def pdf(self, data):
+        return tf.ones_like(data.get_weight())

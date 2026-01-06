@@ -100,7 +100,6 @@ def multi_sampling(
         a.add_gen(data_shape(data))
         # print(a.eff, a.N_gen, max_weight)
         all_data.append(data)
-        print(len(all_data), flush=True)
 
     ret = data_merge(*all_data)
 

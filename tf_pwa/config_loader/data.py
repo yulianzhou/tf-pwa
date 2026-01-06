@@ -356,7 +356,7 @@ class SimpleData:
             return self.get_data("phsp_plot")
         return self.get_data("phsp")
 
-    def savetxt(self, file_name, data):
+    def savetxt(self, file_name, data, decimals=5):
         if isinstance(data, dict):
             dat_order = self.get_dat_order()
             if "particle" in data:
@@ -371,10 +371,13 @@ class SimpleData:
             raise ValueError("not support data")
         p4 = data_to_numpy(p4)
         p4 = np.stack(p4).transpose((1, 0, 2))
+
+        p4 = np.round(p4, decimals=decimals)
+
         if file_name.endswith("npy"):
             np.save(file_name, p4)
         else:
-            np.savetxt(file_name, p4.reshape((-1, 4)))
+            np.savetxt(file_name, p4.reshape((-1, 4)), fmt=f"%.{decimals}f")
 
 
 @register_data_mode("multi")
